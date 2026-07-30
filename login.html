@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SMS Light — Купить виртуальные номера быстро и просто для Telegram, WhatsApp, Instagram и других сервисов. Моментальная доставка, низкие цены.">
+  <meta name="keywords" content="купить виртуальные номера, смс активация, виртуальный номер, telegram, whatsapp, sms light">
+  <meta name="robots" content="index, follow">
+  <title>Вход | SMS Light</title>
+  <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .verify-banner {
+      background: var(--green-subtle);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .verify-banner__title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-100);
+      margin-bottom: 4px;
+    }
+    .verify-banner__text {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-bottom: 10px;
+    }
+    [data-theme="light"] .verify-banner {
+      background: rgba(5, 150, 105, 0.06);
+      border-color: rgba(5, 150, 105, 0.2);
+    }
+    [data-theme="light"] .verify-banner__title { color: var(--gray-50); }
+    [data-theme="light"] .verify-banner__text { color: var(--gray-500); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="logo">
+        <svg class="logo__icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,0 15,10 24,12 15,14 12,24 9,14 0,12 9,10"/></svg>
+        <span class="logo__text">SMS<span class="logo__accent">Light</span></span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="index.html" class="nav__link">Главная</a>
+        <a href="index.html#services" class="nav__link">Услуги</a>
+        <span id="navAuth">
+          <a href="login.html" class="nav__link">Войти</a>
+          <a href="register.html" class="btn btn--sm">Регистрация</a>
+        </span>
+      </nav>
+      <div class="header__actions">
+        <select class="currency-select" id="currencySelect" aria-label="Currency">
+          <option value="RUB" selected>₽ RUB</option>
+          <option value="USD">$ USD</option>
+        </select>
+        <button class="theme-toggle" id="themeToggle" onclick="Auth.toggleTheme()" aria-label="Сменить тему">
+          <svg class="theme-toggle__sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="theme-toggle__moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="burger" id="burger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main>
+
+<section class="auth">
+  <div class="container">
+    <div class="auth__card" style="animation: fadeUp 0.5s ease both;">
+      <div class="auth__header">
+        <svg class="auth__icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,0 15,10 24,12 15,14 12,24 9,14 0,12 9,10"/></svg>
+        <h1 class="auth__title">С возвращением</h1>
+        <p class="auth__subtitle">Войдите, чтобы купить виртуальный номер</p>
+      </div>
+
+      <!-- Verify banner (shown when attempting to log in with unverified email) -->
+      <div class="verify-banner" id="verifyBanner" style="display:none">
+        <div class="verify-banner__title">📧 Email не подтверждён</div>
+        <div class="verify-banner__text" id="verifyBannerText">Проверьте почту и введите код подтверждения</div>
+
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <input type="text" id="verifyCodeInput" class="form-input" placeholder="Код из письма" style="width:140px;text-align:center;letter-spacing:4px;font-weight:700;" maxlength="6">
+          <button class="btn btn--sm" id="verifyCodeBtn">Подтвердить</button>
+        </div>
+        <p style="font-size:12px;color:#6b7280;margin-top:8px;">
+          <a href="#" id="resendVerifyLink" style="color:#10b981;">Отправить код снова</a>
+        </p>
+      </div>
+
+      <form class="auth__form" id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Пароль</label>
+          <input type="password" id="password" class="form-input" placeholder="••••••" required>
+        </div>
+        <div class="form-group" style="text-align:right;margin-top:-8px;margin-bottom:8px;">
+          <a href="forgot-password.html" style="font-size:13px;color:var(--green);text-decoration:none;font-weight:500;">Забыли пароль?</a>
+        </div>
+        <div class="form-error" id="formError" style="display:none"></div>
+        <button type="submit" class="btn btn--full" id="loginBtn">Войти</button>
+      </form>
+
+      <p class="auth__switch">
+        Нет аккаунта?
+        <a href="register.html">Регистрация</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var _loginEmail = '';
+  var form = document.getElementById('loginForm');
+  var btn = document.getElementById('loginBtn');
+  var err = document.getElementById('formError');
+  var verifyBanner = document.getElementById('verifyBanner');
+  var verifyInput = document.getElementById('verifyCodeInput');
+  var verifyBtn = document.getElementById('verifyCodeBtn');
+  var resendLink = document.getElementById('resendVerifyLink');
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    err.style.display = 'none'; err.textContent = '';
+    btn.disabled = true; btn.textContent = 'Вход...';
+
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      err.textContent = 'Введите email и пароль';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Войти';
+      return;
+    }
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        if (data.needs_verification) {
+          btn.disabled = false; btn.textContent = 'Войти';
+          showVerifyBanner(data.email);
+          return;
+        }
+        err.textContent = data.error;
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Войти';
+        return;
+      }
+
+      // Success — store minimal session in localStorage for legacy code
+      _loginEmail = '';
+      verifyBanner.style.display = 'none';
+
+      // Fetch user data and redirect
+      fetch('/api/auth/me')
+        .then(function(r) { return r.json(); })
+        .then(function(user) {
+          if (user.authed && typeof Auth !== 'undefined' && Auth.setSession) {
+            // Store minimal session for localStorage-based legacy features
+            try {
+              localStorage.setItem('sms_session', JSON.stringify({ id: user.id, name: user.name, nickname: user.nickname, email: user.email, is_admin: user.is_admin }));
+              localStorage.setItem('sms_user', JSON.stringify({ id: user.id, name: user.name, email: user.email }));
+            } catch(e) {}
+          }
+          window.location.href = data.is_admin ? 'admin.html' : 'index.html';
+        })
+        .catch(function() {
+          window.location.href = data.is_admin ? 'admin.html' : 'index.html';
+        });
+    })
+    .catch(function() {
+      err.textContent = 'Ошибка соединения с сервером';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Войти';
+    });
+  });
+
+  function showVerifyBanner(email) {
+    _loginEmail = email;
+    document.getElementById('verifyBannerText').textContent = 'Код отправлен на ' + email;
+    verifyBanner.style.display = '';
+    verifyInput.value = '';
+    verifyInput.focus();
+  }
+
+  // Verify code from banner
+  verifyBtn.addEventListener('click', function() {
+    var code = verifyInput.value.trim();
+    if (!code) return;
+    verifyBtn.disabled = true; verifyBtn.textContent = '...';
+
+    fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: _loginEmail, code: code })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        err.textContent = data.error;
+        err.style.display = 'block';
+        verifyBtn.disabled = false; verifyBtn.textContent = 'Подтвердить';
+        return;
+      }
+      verifyBanner.style.display = 'none';
+      err.style.display = 'none';
+      // Auto-login after verification
+      btn.disabled = true; btn.textContent = 'Вход...';
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: _loginEmail, password: document.getElementById('password').value })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data2) {
+        if (data2.ok) {
+          window.location.href = data2.is_admin ? 'admin.html' : 'index.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      })
+      .catch(function() { window.location.href = 'index.html'; });
+    })
+    .catch(function() {
+      err.textContent = 'Ошибка сервера';
+      err.style.display = 'block';
+      verifyBtn.disabled = false; verifyBtn.textContent = 'Подтвердить';
+    });
+  });
+
+  // Resend code
+  resendLink.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (!_loginEmail) return;
+    fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: _loginEmail })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        if (data.email_failed && data.dev_code) {
+          document.getElementById('verifyBannerText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + data.dev_code + '</strong>';
+          document.getElementById('verifyCodeInput').value = data.dev_code;
+        } else {
+          document.getElementById('verifyBannerText').textContent = 'Новый код отправлен на ' + _loginEmail;
+        }
+      }
+    })
+    .catch(function() {});
+  });
+
+  // Currency switcher
+  (function() {
+    var select = document.getElementById('currencySelect');
+    if (!select) return;
+    var saved = document.cookie.replace(/(?:(?:^|.*;\s*)currency\s*=\s*([^;]*).*$)|^.*$/, '$1');
+    if (saved === 'USD') select.value = 'USD';
+    select.addEventListener('change', function() {
+      document.cookie = 'currency=' + this.value + '; path=/; max-age=86400';
+    });
+  })();
+})();
+</script>
+
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/chat-server.js"></script>
+</body>
+</html>

@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ-панель | SMS Light</title>
+  <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    .admin-header {
+      background: #0f0f0f;
+      border-bottom: 1px solid #222;
+      padding: 16px 0;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .admin-header__inner {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .admin-header__logo {
+      display: flex; align-items: center; gap: 10px;
+      color: #e0e0e0; text-decoration: none; font-weight: 700; font-size: 18px;
+    }
+    .admin-header__logo svg { color: #10b981; }
+    .admin-header__logo span { color: #10b981; }
+    .admin-header__actions { display: flex; align-items: center; gap: 16px; }
+    .admin-badge {
+      background: #059669; color: #fff; padding: 4px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 10px; font-size: 14px; font-weight: 500;
+      border: none; cursor: pointer; text-decoration: none; transition: all 0.2s;
+    }
+    .btn--outline {
+      background: transparent; border: 1px solid #333; color: #888;
+    }
+    .btn--outline:hover { border-color: #10b981; color: #e0e0e0; }
+    .btn--danger {
+      background: #e74c3c; color: #fff;
+    }
+    .btn--danger:hover { background: #c0392b; }
+    .btn--sm { padding: 6px 14px; font-size: 13px; }
+
+    /* Page */
+    .page { padding: 40px 0; }
+    .page__title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+    .page__subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: #181818; border: 1px solid #222; border-radius: 14px; padding: 20px;
+    }
+    .stat-card__label { font-size: 13px; color: #888; margin-bottom: 6px; }
+    .stat-card__value { font-size: 28px; font-weight: 700; color: #e0e0e0; }
+    .stat-card__value small { font-size: 14px; font-weight: 400; color: #888; }
+
+    /* Table */
+    .table-wrap {
+      background: #181818; border: 1px solid #222; border-radius: 12px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 14px 20px; font-size: 14px; }
+    th {
+      background: #0f0f0f; color: #888; font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 20px;
+    }
+    tr:not(:last-child) td { border-bottom: 1px solid #222; }
+    td { color: #ccc; }
+    .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    }
+    .badge--admin { background: rgba(16,185,129,0.15); color: #10b981; }
+    .badge--user { background: #222; color: #888; }
+    .user-name { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: #059669;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .user-email { font-size: 13px; color: #6b7280; display: block; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+    .empty-state__icon { font-size: 48px; margin-bottom: 12px; display: block; }
+    .empty-state__text { font-size: 16px; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 80px 0; color: #6b7280; }
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid #222; border-top-color: #10b981;
+      border-radius: 50%; margin: 0 auto 16px; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Login prompt */
+    .login-prompt {
+      text-align: center; padding: 80px 20px;
+    }
+    .login-prompt__icon { font-size: 56px; margin-bottom: 16px; display: block; }
+    .login-prompt__title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .login-prompt__text { color: #6b7280; margin-bottom: 24px; }
+
+    /* Delete button */
+    .btn--icon {
+      background: transparent; border: 1px solid #2a2f45; color: #6b7280;
+      padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+      transition: all 0.2s;
+    }
+    .btn--icon:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* Tabs */
+    .admin-tabs {
+      display: flex; gap: 4px; margin-bottom: 24px;
+      background: #181818; border-radius: 12px; padding: 4px;
+      border: 1px solid #222;
+    }
+    .admin-tab {
+      flex: 1; padding: 10px 16px; border: none; border-radius: 8px;
+      background: transparent; color: #888; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .admin-tab:hover { color: #e0e0e0; }
+    .admin-tab.active {
+      background: #059669; color: #fff;
+    }
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+
+    /* Admin reply form */
+    .reply-form { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .reply-form textarea {
+      flex: 1; min-width: 200px; padding: 8px 12px; border-radius: 8px;
+      background: #0f0f0f; border: 1px solid #222; color: #e0e0e0;
+      font-size: 13px; font-family: inherit; resize: vertical;
+    }
+    .reply-form textarea:focus { outline: none; border-color: #10b981; }
+    .reply-form .btn { flex-shrink: 0; }
+
+    /* Purchase actions */
+    .purchase-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .purchase-actions input[type="text"] {
+      padding: 6px 10px; border-radius: 6px; background: #0f0f0f;
+      border: 1px solid #222; color: #e0e0e0; font-size: 13px; width: 150px;
+    }
+    .purchase-actions input[type="text"]:focus { outline: none; border-color: #10b981; }
+    .btn--success {
+      background: #059669; color: #fff;
+    }
+    .btn--success:hover { background: #059669; }
+    .btn--warning {
+      background: #e67e22; color: #fff;
+    }
+    .btn--warning:hover { background: #d35400; }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-block; padding: 2px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 600;
+    }
+    .status-badge.pending { background: rgba(234,179,8,0.15); color: #eab308; }
+    .status-badge.completed { background: rgba(16,185,129,0.15); color: #10b981; }
+    .status-badge.rejected { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .status-badge.open { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .status-badge.closed { background: rgba(107,114,128,0.15); color: #6b7280; }
+
+    /* Chat styles */
+    .chat-layout { display: flex; gap: 16px; min-height: 400px; }
+    .chat-list {
+      width: 280px; flex-shrink: 0;
+      background: #181818; border: 1px solid #222; border-radius: 12px;
+      overflow-y: auto; max-height: 500px;
+    }
+    .chat-list__item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; cursor: pointer; transition: all 0.2s;
+      border-bottom: 1px solid #222;
+    }
+    .chat-list__item:last-child { border-bottom: none; }
+    .chat-list__item:hover { background: rgba(16,185,129,0.08); }
+    .chat-list__item.active { background: rgba(16,185,129,0.15); border-left: 3px solid #10b981; }
+    .chat-list__avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #059669; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .chat-list__info { flex: 1; min-width: 0; }
+    .chat-list__name { font-size: 14px; font-weight: 600; color: #e0e0e0; }
+    .chat-list__preview { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-list__unread {
+      background: #ef4444; color: #fff; font-size: 11px; font-weight: 700;
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .chat-list__empty {
+      padding: 40px 20px; text-align: center; color: #888; font-size: 14px;
+    }
+    .chat-window {
+      flex: 1; display: flex; flex-direction: column;
+      background: #181818; border: 1px solid #222; border-radius: 12px;
+      overflow: hidden; min-height: 400px;
+    }
+    .chat-window__header {
+      padding: 16px 20px; border-bottom: 1px solid #222;
+      font-weight: 600; color: #e0e0e0; font-size: 15px;
+      background: #0f0f0f;
+    }
+    .chat-window__messages {
+      flex: 1; overflow-y: auto; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 8px;
+      max-height: 360px;
+    }
+    .chat-window__empty {
+      text-align: center; color: #888; padding: 60px 20px; font-size: 14px;
+    }
+    .chat-msg {
+      max-width: 80%; padding: 10px 14px; border-radius: 12px;
+      font-size: 14px; line-height: 1.5; word-break: break-word;
+    }
+    .chat-msg--admin {
+      align-self: flex-end;
+      background: #059669; color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-msg--user {
+      align-self: flex-start;
+      background: #222; color: #ccc;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg__time {
+      font-size: 11px; opacity: 0.7; margin-top: 4px; text-align: right;
+    }
+    .chat-window__input {
+      display: flex; gap: 8px; padding: 12px 16px;
+      border-top: 1px solid #222; background: #0f0f0f;
+    }
+    .chat-window__input input {
+      flex: 1; padding: 10px 14px; border-radius: 8px;
+      background: #0f0f0f; border: 1px solid #333; color: #e0e0e0;
+      font-size: 14px; font-family: inherit; outline: none;
+    }
+    .chat-window__input input:focus { border-color: #10b981; }
+    .chat-window__input .btn { flex-shrink: 0; }
+
+    /* Purchase cards in chat */
+    .chat-purchases {
+      padding: 10px 16px;
+      border-bottom: 1px solid #222;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #0f0f0f;
+    }
+    .chat-purchase-card {
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: default;
+      transition: border-color 0.2s;
+    }
+    .chat-purchase-card:hover { border-color: #059669; }
+    .chat-purchase__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+    .chat-purchase__service {
+      font-weight: 600;
+      font-size: 14px;
+      color: #e0e0e0;
+    }
+    .chat-purchase__price {
+      font-weight: 700;
+      font-size: 13px;
+      color: #10b981;
+    }
+    .chat-purchase__meta {
+      display: flex;
+      gap: 14px;
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 2px;
+      flex-wrap: wrap;
+    }
+    .chat-purchase__meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .chat-purchase__date {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    /* Modal (order) */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 2000;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+    .modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+      background: #181818; border: 1px solid #222; border-radius: 12px;
+      z-index: 2001; width: 420px; max-width: 90vw;
+      opacity: 0; pointer-events: none; transition: all 0.3s ease;
+    }
+    .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+    .modal__header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid #222;
+    }
+    .modal__header h3 { font-size: 18px; font-weight: 700; color: #e0e0e0; margin: 0; }
+    .modal__close {
+      background: none; border: none; font-size: 18px; cursor: pointer;
+      color: #888; padding: 4px 8px; border-radius: 6px;
+    }
+    .modal__close:hover { background: #222; color: #e0e0e0; }
+    .modal__body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .modal__body .form-group label { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
+    .modal__body .form-input {
+      width: 100%; padding: 10px 14px; background: #0f0f0f;
+      border: 1px solid #333; border-radius: 8px; color: #e0e0e0;
+      font-size: 14px; font-family: inherit; outline: none;
+    }
+    .modal__body .form-input:focus { border-color: #10b981; }
+    .modal__price {
+      text-align: center; font-size: 20px; font-weight: 700;
+      color: #10b981; padding: 12px; background: rgba(16,185,129,0.12);
+      border-radius: 10px;
+    }
+    .modal__price strong { font-size: 24px; }
+    .modal__footer {
+      display: flex; gap: 8px; justify-content: flex-end;
+      padding: 16px 24px; border-top: 1px solid #222;
+    }
+
+    /* Admin header actions gap for theme toggle */
+    .admin-header__actions .theme-toggle {
+      background: transparent; border: 1px solid #333; color: #888;
+      font-size: 18px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s; line-height: 1;
+    }
+    .admin-header__actions .theme-toggle:hover { border-color: #10b981; }
+
+    .btn--primary {
+      background: #059669; color: #fff;
+    }
+    .btn--primary:hover { background: #059669; }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .toast {
+      background: #181818; border: 1px solid #059669; border-radius: 12px;
+      padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;
+      min-width: 280px; max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0; transform: translateX(40px);
+      transition: all 0.3s ease; pointer-events: auto;
+    }
+    .toast.visible { opacity: 1; transform: translateX(0); }
+    .toast__icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+    .toast__body { flex: 1; min-width: 0; }
+    .toast__title { font-size: 14px; font-weight: 600; color: #e0e0e0; margin-bottom: 2px; }
+    .toast__text { font-size: 13px; color: #888; line-height: 1.4; }
+
+    /* ========== Light Theme ========== */
+    [data-theme="light"] body {
+      background: #f5f5f7;
+      color: #333;
+    }
+    [data-theme="light"] .admin-header {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .admin-header__logo { color: #333; }
+    [data-theme="light"] .admin-header__logo span { color: #10b981; }
+    [data-theme="light"] .btn--outline {
+      border-color: #d0d0d0;
+      color: #666;
+    }
+    [data-theme="light"] .btn--outline:hover {
+      border-color: #10b981;
+      color: #333;
+    }
+    [data-theme="light"] .page__title { color: #222; }
+    [data-theme="light"] .page__subtitle { color: #666; }
+    [data-theme="light"] .stat-card {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .stat-card__value { color: #222; }
+    [data-theme="light"] .table-wrap {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] th {
+      background: #f9f9fb;
+      color: #888;
+    }
+    [data-theme="light"] th, [data-theme="light"] td { border-color: #eee; }
+    [data-theme="light"] tr:not(:last-child) td { border-bottom-color: #eee; }
+    [data-theme="light"] td { color: #555; }
+    [data-theme="light"] .badge--user {
+      background: #eee;
+      color: #666;
+    }
+    [data-theme="light"] .user-email { color: #999; }
+    [data-theme="light"] .empty-state__text { color: #666; }
+    [data-theme="light"] .spinner {
+      border-color: #ddd;
+      border-top-color: #10b981;
+    }
+    [data-theme="light"] .btn--icon {
+      border-color: #ddd;
+      color: #888;
+    }
+    [data-theme="light"] .admin-tabs {
+      background: #e8e8ec;
+      border-color: #ddd;
+    }
+    [data-theme="light"] .admin-tab { color: #888; }
+    [data-theme="light"] .admin-tab:hover { color: #333; }
+    [data-theme="light"] .reply-form textarea {
+      background: #fff;
+      border-color: #ddd;
+      color: #333;
+    }
+    [data-theme="light"] .purchase-actions input[type="text"] {
+      background: #fff;
+      border-color: #ddd;
+      color: #333;
+    }
+    [data-theme="light"] .chat-list {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .chat-list__item { border-bottom-color: #eee; }
+    [data-theme="light"] .chat-list__item:hover { background: rgba(16,185,129,0.06); }
+    [data-theme="light"] .chat-list__item.active { background: rgba(16,185,129,0.1); }
+
+    /* Email section */
+    .smtp-card {
+      background: #181818; border: 1px solid #222; border-radius: 14px; padding: 24px;
+      margin-bottom: 16px;
+    }
+    .smtp-card__title { font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 4px; }
+    .smtp-card__desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+    .smtp-status { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+    .smtp-status--ok { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+    .smtp-status--err { background: rgba(231,76,60,0.1); color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
+    .smtp-test-result {
+      padding: 12px 16px; border-radius: 10px; margin-top: 12px; font-size: 14px; display: none;
+    }
+    .smtp-test-result--ok { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); display: block; }
+    .smtp-test-result--err { background: rgba(231,76,60,0.1); color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); display: block; }
+    .smtp-test-result--warn { background: rgba(255,193,7,0.1); color: #ffc107; border: 1px solid rgba(255,193,7,0.25); display: block; }
+    [data-theme="light"] .smtp-card { background: #fff; border-color: #e0e0e0; }
+    [data-theme="light"] .smtp-card__title { color: #222; }
+    [data-theme="light"] .smtp-card__desc { color: #888; }
+    [data-theme="light"] .chat-list__name { color: #333; }
+    [data-theme="light"] .chat-list__preview { color: #888; }
+    [data-theme="light"] .chat-list__empty { color: #888; }
+    [data-theme="light"] .chat-window {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .chat-window__header {
+      background: #f9f9fb;
+      border-color: #eee;
+      color: #333;
+    }
+    [data-theme="light"] .chat-window__empty { color: #888; }
+    [data-theme="light"] .chat-msg--admin {
+      background: #10b981;
+      color: #fff;
+    }
+    [data-theme="light"] .chat-msg--user {
+      background: #eee;
+      color: #333;
+    }
+    [data-theme="light"] .chat-window__input {
+      background: #f9f9fb;
+      border-color: #eee;
+    }
+    [data-theme="light"] .chat-window__input input {
+      background: #fff;
+      border-color: #ddd;
+      color: #333;
+    }
+    [data-theme="light"] .chat-purchases {
+      background: #f9f9fb;
+      border-color: #eee;
+    }
+    [data-theme="light"] .chat-purchase-card {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .chat-purchase__service { color: #333; }
+    [data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.4); }
+    [data-theme="light"] .modal {
+      background: #fff;
+      border-color: #e0e0e0;
+    }
+    [data-theme="light"] .modal__header { border-color: #eee; }
+    [data-theme="light"] .modal__header h3 { color: #222; }
+    [data-theme="light"] .modal__close { color: #888; }
+    [data-theme="light"] .modal__close:hover { background: #eee; color: #333; }
+    [data-theme="light"] .modal__body .form-input {
+      background: #fff;
+      border-color: #ddd;
+      color: #333;
+    }
+    [data-theme="light"] .modal__footer { border-color: #eee; }
+    [data-theme="light"] .admin-header__actions .theme-toggle {
+      border-color: #ddd;
+    }
+    [data-theme="light"] .toast {
+      background: #fff;
+      border-color: #10b981;
+    }
+    [data-theme="light"] .toast__title { color: #222; }
+    [data-theme="light"] .toast__text { color: #666; }
+    [data-theme="light"] .login-prompt__text { color: #666; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="container admin-header__inner">
+      <a href="index.html" class="admin-header__logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,0 15,10 24,12 15,14 12,24 9,14 0,12 9,10"/></svg>
+        SMS<span>Light</span>
+        <span class="admin-badge">Админ</span>
+      </a>
+      <div class="admin-header__actions">
+        <button class="theme-toggle" id="themeToggle" onclick="Auth.toggleTheme()" aria-label="Сменить тему">
+          <svg class="theme-toggle__sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="theme-toggle__moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <a href="index.html" class="btn btn--outline btn--sm">← На сайт</a>
+        <button class="btn btn--danger btn--sm" id="logoutBtn" style="display:none">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="page" style="animation: fadeUp 0.5s ease both;">
+    <div class="container">
+
+      <!-- Login prompt (not authed) -->
+      <div id="loginPrompt" class="login-prompt" style="display:none">
+        <span class="login-prompt__icon">🔒</span>
+        <h1 class="login-prompt__title">Доступ только для администратора</h1>
+        <p class="login-prompt__text">Войдите под учётной записью администратора</p>
+        <a href="login.html" class="btn btn--primary">Войти</a>
+      </div>
+
+      <!-- Dashboard (authed) -->
+      <div id="dashboard" style="display:none">
+        <h1 class="page__title">Панель управления</h1>
+        <p class="page__subtitle">Управление пользователями, заявками, покупками и почтой</p>
+
+        <!-- Tabs -->
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-section="users">Пользователи</button>
+          <button class="admin-tab" data-section="tickets">Заявки <span id="ticketBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:0 8px;font-size:11px;margin-left:4px"></span></button>
+          <button class="admin-tab" data-section="purchases">Покупки</button>
+          <button class="admin-tab" data-section="chats">Чаты <span id="chatBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:0 8px;font-size:11px;margin-left:4px"></span></button>
+	          <button class="admin-tab" data-section="email">Email</button>
+        </div>
+
+        <!-- Section: Users -->
+        <div class="admin-section active" id="section-users">
+          <!-- Stats -->
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-card__label">Всего пользователей</div>
+              <div class="stat-card__value" id="statTotal">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Администраторов</div>
+              <div class="stat-card__value" id="statAdmins">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Зарегистрировано сегодня</div>
+              <div class="stat-card__value" id="statToday">—</div>
+            </div>
+          </div>
+
+          <!-- Users table -->
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Пользователь</th>
+                  <th>Email</th>
+                  <th>Роль</th>
+                  <th>Дата регистрации</th>
+                  <th></th>
+                  <th>Связь</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody">
+                <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Загрузка...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section: Tickets -->
+        <div class="admin-section" id="section-tickets">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Пользователь</th>
+                  <th>Тема</th>
+                  <th>Сообщение</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th>Ответ</th>
+                </tr>
+              </thead>
+              <tbody id="ticketsBody">
+                <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Загрузка...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section: Purchases -->
+        <div class="admin-section" id="section-purchases">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Пользователь</th>
+                  <th>Услуга</th>
+                  <th>Страна</th>
+                  <th>Цена</th>
+                  <th>Оплата</th>
+                  <th>Телефон</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th>Действия</th>
+                  <th>Связь</th>
+                </tr>
+              </thead>
+              <tbody id="purchasesBody">
+                <tr><td colspan="11"><div class="loading"><div class="spinner"></div>Загрузка...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section: Chats -->
+        <div class="admin-section" id="section-chats">
+          <div class="chat-layout">
+            <div class="chat-list" id="chatList">
+              <div class="chat-list__empty">Загрузка...</div>
+            </div>
+            <div class="chat-window" id="chatWindow">
+              <div class="chat-window__header" id="chatWindowHeader">Выберите чат</div>
+              <div class="chat-window__messages" id="chatWindowMessages">
+                <div class="chat-window__empty">Выберите пользователя слева, чтобы начать переписку</div>
+              </div>
+              <div class="chat-window__input" id="chatWindowInput" style="display:none">
+                <input type="text" id="adminChatInput" placeholder="Напишите сообщение..." autocomplete="off">
+                <button class="btn btn--success btn--sm" id="adminChatSend">Отправить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  
+        <!-- Section: Email -->
+        <div class="admin-section" id="section-email">
+
+          <!-- SMTP Status -->
+          <div class="smtp-card">
+            <div class="smtp-card__title">📡 Статус SMTP</div>
+            <div class="smtp-card__desc">Проверка подключения к почтовому серверу</div>
+            <div class="smtp-status" id="smtpStatus">
+              <span id="smtpStatusIcon">⏳</span>
+              <span id="smtpStatusText">Проверка...</span>
+            </div>
+            <button class="btn btn--outline btn--sm" onclick="checkSmtpStatus()">Проверить снова</button>
+          </div>
+
+          <!-- Test Email -->
+          <div class="smtp-card">
+            <div class="smtp-card__title">✉️ Тестовая отправка</div>
+            <div class="smtp-card__desc">Отправьте тестовое письмо с кодом подтверждения</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+              <input type="email" id="testEmailTo" class="form-input" placeholder="email для теста" style="flex:1;background:#0f0f0f;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#e0e0e0;font-size:14px;outline:none;font-family:inherit;">
+              <button class="btn btn--sm" id="sendTestEmailBtn" onclick="sendTestEmail()">Отправить</button>
+            </div>
+            <div class="smtp-test-result" id="testEmailResult"></div>
+          </div>
+
+          <!-- App Password Info -->
+          <div class="smtp-card">
+            <div class="smtp-card__title">🔐 Настройка SMTP</div>
+            <div class="smtp-card__desc">Для отправки писем через Mail.ru / inbox.ru требуется пароль приложения</div>
+            <div style="font-size:13px;color:#9ca3af;line-height:1.7;">
+              <p>1. Перейдите в <a href="https://e.mail.ru/settings/security" target="_blank" style="color:#10b981;">настройки Mail.ru</a> → Безопасность → Пароли для внешних приложений</p>
+              <p>2. Создайте «Пароль для внешнего приложения»</p>
+              <p>3. Скопируйте его в <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">SMTP_PASS</code> в файле <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">.env</code></p>
+              <p style="margin-top:8px;color:#6b7280;">⚠️ Обычный пароль от почты НЕ подходит — Mail.ru блокирует SMTP-вход без пароля приложения.</p>
+              <div style="margin-top:12px;background:#0f0f0f;border:1px solid #222;border-radius:8px;padding:12px 16px;font-size:12px;font-family:monospace;color:#888;">
+SMTP_HOST=smtp.mail.ru<br>
+SMTP_PORT=465<br>
+SMTP_SECURE=true<br>
+SMTP_USER=your@mail.ru<br>
+SMTP_PASS=пароль_приложения<br>
+SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+	      </div>
+	    </div>
+	  </div></div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/chat-server.js"></script>
+  <script>
+    var activeChatUserId = null;
+    var chatPollTimer = null;
+
+    // ====================== Auth Check ======================
+    function init() {
+      Auth.refreshSession();
+      var session = Auth.getSession();
+
+      if (session && session.is_admin) {
+        document.getElementById('loginPrompt').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('logoutBtn').style.display = 'inline-flex';
+        Auth.applyTheme();
+        ChatServer.startSync();       // ← синхронизация чата с сервером
+        loadUsers();
+        loadTickets();
+        loadPurchases();
+        loadChats();
+        initTabs();
+        startChatPoll();
+        initNotifications();
+      } else if (session) {
+        document.getElementById('loginPrompt').style.display = 'block';
+        document.querySelector('.login-prompt__text').textContent = 'У вас нет прав администратора';
+      } else {
+        document.getElementById('loginPrompt').style.display = 'block';
+      }
+    }
+
+    // ====================== Tabs ======================
+    function initTabs() {
+      document.querySelectorAll('.admin-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+          this.classList.add('active');
+          document.querySelectorAll('.admin-section').forEach(function(s) { s.classList.remove('active'); });
+          document.getElementById('section-' + this.dataset.section).classList.add('active');
+          if (this.dataset.section === 'chats') loadChats();
+          if (this.dataset.section === 'email') loadEmailStatus();
+        });
+      });
+
+      // Send message on Enter
+      document.getElementById('adminChatInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); sendAdminMessage(); }
+      });
+      document.getElementById('adminChatSend').addEventListener('click', sendAdminMessage);
+    }
+
+    // ====================== Users ======================
+    var _usersCache = [];
+
+    function loadUsers() {
+      fetch('/api/admin/users')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          _usersCache = data.users || [];
+          renderUsers(_usersCache);
+        })
+        .catch(function() {
+          _usersCache = [];
+          renderUsers([]);
+        });
+    }
+
+    function renderUsers(users) {
+      if (!users || users.length === 0) {
+        document.getElementById('usersBody').innerHTML =
+          '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon">📭</span><span class="empty-state__text">Нет зарегистрированных пользователей</span></div></td></tr>';
+        document.getElementById('statTotal').textContent = '0';
+        document.getElementById('statAdmins').textContent = '0';
+        document.getElementById('statToday').textContent = '0';
+        return;
+      }
+
+      var today = new Date().toISOString().slice(0, 10);
+      var adminCount = 0, todayCount = 0;
+      var html = '';
+      var session = Auth.getSession();
+
+      for (var i = 0; i < users.length; i++) {
+        var u = users[i];
+        var isAdmin = u.is_admin === 1;
+        if (isAdmin) adminCount++;
+        if (u.created_at && u.created_at.slice(0, 10) === today) todayCount++;
+
+        var initial = (u.name || '?')[0].toUpperCase();
+        var created = u.created_at
+          ? new Date(u.created_at).toLocaleString('ru-RU', {
+              day: 'numeric', month: 'long', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            })
+          : '—';
+
+        html += '<tr>' +
+          '<td style="color:#6b7280;font-size:13px">#' + u.id + '</td>' +
+          '<td><div class="user-name"><div class="user-avatar">' + initial + '</div>' + esc(u.name) + '</div></td>' +
+          '<td><span class="user-email">' + esc(u.email) + '</span></td>' +
+          '<td>' + (isAdmin
+            ? '<span class="badge badge--admin">Админ</span>'
+            : '<span class="badge badge--user">Пользователь</span>') +
+          '</td>' +
+          '<td style="color:#6b7280;font-size:13px">' + created + '</td>' +
+          '<td>' +
+            (isAdmin ? '' :
+              '<button class="btn btn--icon" onclick="deleteUser(' + u.id + ',\'' + esc(u.name) + '\')" title="Удалить">✕</button>'
+            ) +
+          '</td>' +
+          '<td>' + (isAdmin ? '' :
+            '<button class="btn btn--success btn--sm" onclick="openUserChat(' + u.id + ')">Написать</button>'
+          ) + '</td>' +
+          '</tr>';
+      }
+
+      document.getElementById('usersBody').innerHTML = html;
+      document.getElementById('statTotal').textContent = users.length;
+      document.getElementById('statAdmins').textContent = adminCount;
+      document.getElementById('statToday').textContent = todayCount;
+    }
+
+    function deleteUser(id, name) {
+      if (!confirm('Удалить пользователя «' + name + '»?')) return;
+      Auth.deleteUser(id).then(function(result) {
+        if (result.error) { alert(result.error); return; }
+        loadUsers();
+      });
+    }
+
+    // ====================== Tickets ======================
+    function loadTickets() {
+      var tickets = Data.getAllTickets();
+      renderTickets(tickets);
+    }
+
+    function renderTickets(tickets) {
+      var body = document.getElementById('ticketsBody');
+      if (!tickets || tickets.length === 0) {
+        body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon">📭</span><span class="empty-state__text">Нет заявок в поддержку</span></div></td></tr>';
+        document.getElementById('ticketBadge').style.display = 'none';
+        return;
+      }
+
+      var openCount = 0;
+      var html = '';
+      for (var i = 0; i < tickets.length; i++) {
+        var t = tickets[i];
+        if (t.status === 'open') openCount++;
+        var date = t.created_at
+          ? new Date(t.created_at).toLocaleString('ru-RU', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          : '—';
+
+        html += '<tr>' +
+          '<td style="color:#6b7280;font-size:13px">#' + t.id + '</td>' +
+          '<td><strong>' + esc(t.userName) + '</strong><br><span style="font-size:12px;color:#6b7280">' + esc(t.userEmail) + '</span></td>' +
+          '<td><strong>' + esc(t.subject) + '</strong></td>' +
+          '<td style="max-width:200px;word-break:break-word">' + esc(t.message) + '</td>' +
+          '<td><span class="status-badge ' + t.status + '">' + (t.status === 'open' ? 'Открыт' : 'Закрыт') + '</span></td>' +
+          '<td style="color:#6b7280;font-size:13px">' + date + '</td>' +
+          '<td style="min-width:220px">' +
+            (t.status === 'open'
+              ? '<div class="reply-form">' +
+                  '<textarea id="replyText-' + t.id + '" rows="2" placeholder="Ответ администратора..."></textarea>' +
+                  '<button class="btn btn--success btn--sm" onclick="replyToTicket(' + t.id + ')">Ответить</button>' +
+                '</div>'
+              : t.adminReply
+                ? '<div style="font-size:13px;color:#9ca3bf;max-width:200px;word-break:break-word"><small>Ответ:</small><br>' + esc(t.adminReply) + '</div>'
+                : '<span style="color:#6b7280;font-size:13px">—</span>'
+            ) +
+          '</td>' +
+          '</tr>';
+      }
+
+      body.innerHTML = html;
+
+      var badge = document.getElementById('ticketBadge');
+      if (openCount > 0) {
+        badge.textContent = openCount;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function replyToTicket(ticketId) {
+      var textarea = document.getElementById('replyText-' + ticketId);
+      var reply = textarea ? textarea.value.trim() : '';
+      if (!reply) { alert('Введите текст ответа'); return; }
+      if (!confirm('Отправить ответ и закрыть заявку?')) return;
+      var session = Auth.getSession();
+      Data.replyToTicket(ticketId, reply, session.id, session.name);
+      loadTickets();
+      loadPurchases();
+    }
+
+    // ====================== Purchases ======================
+    function loadPurchases() {
+      var purchases = Data.getAllPurchases();
+      renderPurchases(purchases);
+    }
+
+    function renderPurchases(purchases) {
+      var body = document.getElementById('purchasesBody');
+      if (!purchases || purchases.length === 0) {
+        body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><span class="empty-state__icon">📦</span><span class="empty-state__text">Нет покупок</span></div></td></tr>';
+        return;
+      }
+
+      var users = _usersCache;
+      function getUserName(uid) {
+        for (var i = 0; i < users.length; i++) {
+          if (users[i].id === uid) return users[i].name;
+        }
+        return '#' + uid;
+      }
+      function getUser(uid) {
+        for (var i = 0; i < users.length; i++) {
+          if (users[i].id === uid) return users[i];
+        }
+        return null;
+      }
+
+      var html = '';
+      for (var i = 0; i < purchases.length; i++) {
+        var p = purchases[i];
+        var date = p.created_at
+          ? new Date(p.created_at).toLocaleString('ru-RU', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          : '—';
+
+        var statusOptions = ['pending', 'completed', 'rejected'].map(function(s) {
+          var labels = { pending: 'Ожидает', completed: 'Завершён', rejected: 'Отклонён' };
+          return '<option value="' + s + '"' + (p.status === s ? ' selected' : '') + '>' + labels[s] + '</option>';
+        }).join('');
+
+        var phoneVal = p.phoneNumber || '';
+        var user = getUser(p.userId);
+
+        var paidIcon = p.status === 'completed'
+          ? '<span style="color:#10b981;font-weight:600;">Оплачено</span>'
+          : p.status === 'rejected'
+            ? '<span style="color:#ef4444;font-weight:500;">Отменён</span>'
+            : '<span style="color:#10b981;font-weight:500;">Ожидает</span>';
+
+        html += '<tr>' +
+          '<td style="color:#6b7280;font-size:13px">#' + p.id + '</td>' +
+          '<td>' + esc(getUserName(p.userId)) + '</td>' +
+          '<td>' + esc(p.serviceName) + '</td>' +
+          '<td>' + (typeof Data !== 'undefined' ? Data.getCountryFlag(p.country) : '') + ' ' + esc(p.country) + '</td>' +
+          '<td>' + p.price + ' ' + p.currency + '</td>' +
+          '<td style="text-align:center;">' + paidIcon + '</td>' +
+          '<td>' +
+            '<input type="text" id="phone-' + p.id + '" value="' + esc(phoneVal) + '" placeholder="+7..." style="width:150px">' +
+          '</td>' +
+          '<td>' +
+            '<select id="status-' + p.id + '" class="status-select" style="padding:4px 8px;border-radius:6px;background:#0f0f0f;border:1px solid #333;color:#e0e0e0;font-size:12px">' +
+              statusOptions +
+            '</select>' +
+          '</td>' +
+          '<td style="color:#6b7280;font-size:13px">' + date + '</td>' +
+          '<td>' +
+            '<button class="btn btn--success btn--sm" onclick="updatePurchase(' + p.id + ')" title="Сохранить">💾</button>' +
+          '</td>' +
+          '<td>' + (user && !user.is_admin ?
+            '<button class="btn btn--sm" style="background:#059669;color:#fff" onclick="openUserChat(' + p.userId + ')" title="Написать пользователю">✉️</button>'
+            : '') +
+          '</td>' +
+          '</tr>';
+      }
+
+      body.innerHTML = html;
+    }
+
+    function updatePurchase(purchaseId) {
+      var phone = document.getElementById('phone-' + purchaseId).value.trim();
+      var status = document.getElementById('status-' + purchaseId).value;
+
+      var updates = {};
+      if (phone) updates.phoneNumber = phone;
+      updates.status = status;
+
+      Data.updatePurchase(purchaseId, updates);
+      loadPurchases();
+      loadTickets();
+    }
+
+    // ====================== Chats ======================
+    function loadChats() {
+      var conversations = Data.getAllConversations();
+      renderChatList(conversations);
+      if (activeChatUserId) renderChatWindow(activeChatUserId);
+      updateChatBadge();
+    }
+
+    function renderChatList(conversations) {
+      var el = document.getElementById('chatList');
+      if (!conversations || conversations.length === 0) {
+        el.innerHTML = '<div class="chat-list__empty">Нет активных чатов.<br>Пользователи напишут вам из своего профиля.</div>';
+        return;
+      }
+
+      var html = '';
+      conversations.forEach(function(c) {
+        var initial = (c.otherUserName || '?')[0].toUpperCase();
+        var preview = c.lastMessage ? c.lastMessage.text : '';
+        var isActive = activeChatUserId === c.otherUserId;
+        var unreadBadge = c.unread > 0 ? '<div class="chat-list__unread">' + c.unread + '</div>' : '';
+        // Показываем инфо о покупках в превью (как FunPay)
+        var userPurchasesList = Data.getPurchases(c.otherUserId);
+        if (userPurchasesList.length > 0) {
+          var latestP = userPurchasesList[0];
+          var statusIcon = latestP.status === 'pending' ? '⏳' : latestP.status === 'completed' ? '✅' : '❌';
+          preview = statusIcon + ' ' + latestP.serviceName + ' · ' + (typeof Data !== 'undefined' ? Data.getCountryFlag(latestP.country) : '🌍') + ' ' + latestP.country;
+        } else if (!preview) {
+          preview = 'Нет сообщений';
+        }
+        html += '<div class="chat-list__item ' + (isActive ? 'active' : '') + '" onclick="openUserChat(' + c.otherUserId + ')">' +
+          '<div class="chat-list__avatar">' + initial + '</div>' +
+          '<div class="chat-list__info">' +
+            '<div class="chat-list__name">' + esc(c.otherUserName || 'Пользователь') + '</div>' +
+            '<div class="chat-list__preview">' + esc(preview.length > 40 ? preview.slice(0, 40) + '…' : preview) + '</div>' +
+          '</div>' +
+          unreadBadge +
+        '</div>';
+      });
+
+      el.innerHTML = html;
+    }
+
+    function renderChatWindow(userId) {
+      activeChatUserId = userId;
+      var session = Auth.getSession();
+      var users = _usersCache;
+
+      var user = null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].id === userId) { user = users[i]; break; }
+      }
+      if (!user) return;
+
+      var messages = Data.getConversation(session.id, userId);
+      Data.markConversationRead(session.id, userId);
+      ChatServer.markRead(session.id, userId);   // ← синхронизация прочтения с сервером
+
+      document.getElementById('chatWindowHeader').textContent = 'Чат с ' + (user.name || 'Пользователем');
+      document.getElementById('chatWindowInput').style.display = 'flex';
+
+      // Карточки покупок пользователя (как в FunPay)
+      var userPurchases = Data.getPurchases(userId);
+      var purchasesHtml = '';
+      var statusLabels = { pending: 'Ожидает', completed: 'Завершён', rejected: 'Отклонён' };
+      if (userPurchases.length > 0) {
+        purchasesHtml = '<div class="chat-purchases">';
+        for (var pi = 0; pi < Math.min(userPurchases.length, 5); pi++) {
+          var p = userPurchases[pi];
+          var pDate = new Date(p.created_at).toLocaleString('ru-RU', {
+            day: 'numeric', month: 'long', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          });
+          var pStatus = statusLabels[p.status] || 'Ожидает';
+          purchasesHtml += '<div class="chat-purchase-card">' +
+            '<div class="chat-purchase__header">' +
+              '<span class="chat-purchase__service">' + esc(p.serviceName) + '</span>' +
+              '<span class="chat-purchase__price">' + p.price + ' ' + p.currency + '</span>' +
+            '</div>' +
+            '<div class="chat-purchase__meta">' +
+              '<span>' + (typeof Data !== 'undefined' ? Data.getCountryFlag(p.country) : '🌍') + ' ' + esc(p.country) + '</span>' +
+              '<span>📱 ' + (p.phoneNumber ? esc(p.phoneNumber) : '—') + '</span>' +
+              '<span class="status-badge ' + p.status + '">' + pStatus + '</span>' +
+            '</div>' +
+            '<div class="chat-purchase__date">' + pDate + '</div>' +
+          '</div>';
+        }
+        purchasesHtml += '</div>';
+      }
+
+      var msgsEl = document.getElementById('chatWindowMessages');
+      if (messages.length === 0) {
+        msgsEl.innerHTML = purchasesHtml + '<div class="chat-window__empty">Напишите пользователю первым</div>';
+      } else {
+        var html = '';
+        messages.forEach(function(m) {
+          var isAdmin = m.senderId === session.id;
+          html += '<div class="chat-msg ' + (isAdmin ? 'chat-msg--admin' : 'chat-msg--user') + '">' +
+            '<div class="chat-msg__text">' + esc(m.text) + '</div>' +
+            '<div class="chat-msg__time">' + formatTime(m.created_at) + '</div>' +
+          '</div>';
+        });
+        msgsEl.innerHTML = purchasesHtml + html;
+      }
+
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      document.getElementById('adminChatInput').focus();
+
+      // Update chat list active state
+      document.querySelectorAll('.chat-list__item').forEach(function(item) {
+        item.classList.toggle('active', parseInt(item.getAttribute('onclick').match(/\d+/)) === userId);
+      });
+
+      updateChatBadge();
+    }
+
+    function openUserChat(userId) {
+      // Switch to chats tab
+      document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.admin-section').forEach(function(s) { s.classList.remove('active'); });
+      document.querySelector('.admin-tab[data-section="chats"]').classList.add('active');
+      document.getElementById('section-chats').classList.add('active');
+
+      renderChatWindow(userId);
+      loadChats();
+    }
+
+    function sendAdminMessage() {
+      var input = document.getElementById('adminChatInput');
+      var text = input.value.trim();
+      if (!text || !activeChatUserId) return;
+      input.value = '';
+
+      var session = Auth.getSession();
+      var users = _usersCache;
+
+      var admin = null, user = null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].id === session.id) admin = users[i];
+        if (users[i].id === activeChatUserId) user = users[i];
+      }
+      if (!admin || !user) return;
+
+      Data.sendMessage(session.id, admin.name, activeChatUserId, user.name, text);
+      renderChatWindow(activeChatUserId);
+      loadChats();
+    }
+
+    function updateChatBadge() {
+      var session = Auth.getSession();
+      if (!session) return;
+      var count = Data.getUnreadCount(session.id);
+      var badge = document.getElementById('chatBadge');
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function startChatPoll() {
+      if (chatPollTimer) clearInterval(chatPollTimer);
+      chatPollTimer = setInterval(function() {
+        loadChats();
+        checkNotifications();
+      }, 3000);
+    }
+
+    // ====================== Notifications ======================
+    var NOTIFY_KEY = 'sms_notify_state';
+
+    function getNotifyState() {
+      try { return JSON.parse(localStorage.getItem(NOTIFY_KEY)) || {}; }
+      catch(e) { return {}; }
+    }
+
+    function saveNotifyState(state) {
+      localStorage.setItem(NOTIFY_KEY, JSON.stringify(state));
+    }
+
+    function initNotifications() {
+      var session = Auth.getSession();
+      if (!session || !session.is_admin) return;
+
+      var state = getNotifyState();
+      var adminId = session.id;
+
+      // Первый запуск — запоминаем счётчики, не уведомляем
+      if (!state[adminId]) {
+        state[adminId] = {
+          users: _usersCache.length,
+          purchases: Data.getAllPurchases().length
+        };
+        saveNotifyState(state);
+      }
+    }
+
+    function checkNotifications() {
+      var session = Auth.getSession();
+      if (!session || !session.is_admin) return;
+
+      var state = getNotifyState();
+      var adminId = session.id;
+      if (!state[adminId]) return;
+
+      var s = state[adminId];
+      var users = _usersCache;
+      var purchases = Data.getAllPurchases();
+
+      // Новые пользователи
+      if (users.length > s.users) {
+        var newCount = users.length - s.users;
+        var lastUser = users[users.length - 1];
+        showToast('👤', 'Новый пользователь', esc(lastUser.name) + ' (' + esc(lastUser.email) + ')', newCount);
+        s.users = users.length;
+      }
+
+      // Новые покупки
+      if (purchases.length > s.purchases) {
+        var newPurchases = purchases.length - s.purchases;
+        if (purchases.length > 0) {
+          var lastP = purchases[0];
+          showToast('🛒', 'Новая покупка', lastP.serviceName + ' (' + (typeof Data !== 'undefined' ? Data.getCountryFlag(lastP.country) : '') + ' ' + lastP.country + ') — ' + lastP.price + ' ' + lastP.currency, newPurchases);
+        }
+        s.purchases = purchases.length;
+      }
+
+      saveNotifyState(state);
+    }
+
+    function showToast(icon, title, text, extra) {
+      var container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+
+      var titleHtml = title;
+      if (extra > 1) {
+        titleHtml = title + ' <span style="font-weight:400;color:#888;font-size:12px">(+' + (extra - 1) + ' ещё)</span>';
+      }
+
+      toast.innerHTML =
+        '<div class="toast__icon">' + icon + '</div>' +
+        '<div class="toast__body">' +
+          '<div class="toast__title">' + titleHtml + '</div>' +
+          '<div class="toast__text">' + text + '</div>' +
+        '</div>';
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(function() {
+        toast.classList.add('visible');
+      });
+
+      setTimeout(function() {
+        toast.classList.remove('visible');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, 5000);
+    }
+
+    // ====================== Utilities ======================
+    function esc(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    function formatTime(iso) {
+      var d = new Date(iso);
+      var now = new Date();
+      var isToday = d.toDateString() === now.toDateString();
+      var opts = isToday
+        ? { hour: '2-digit', minute: '2-digit' }
+        : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+      return d.toLocaleString('ru-RU', opts);
+    }
+
+    
+	    // ====================== Email Admin ======================
+	    function loadEmailStatus() {
+	      var statusEl = document.getElementById('smtpStatus');
+	      var iconEl = document.getElementById('smtpStatusIcon');
+	      var textEl = document.getElementById('smtpStatusText');
+	      iconEl.textContent = '⏳';
+	      textEl.textContent = 'Проверка...';
+	      statusEl.className = 'smtp-status';
+
+	      fetch('/api/admin/smtp-status')
+	        .then(function(r) { return r.json(); })
+	        .then(function(data) {
+	          if (data.ok) {
+	            iconEl.textContent = '✅';
+	            textEl.textContent = 'SMTP работает';
+	            statusEl.classList.add('smtp-status--ok');
+	          } else {
+	            iconEl.textContent = '❌';
+	            textEl.textContent = 'SMTP недоступен. Сервер использует тестовый режим (Ethereal).';
+	            statusEl.classList.add('smtp-status--err');
+	          }
+	        })
+	        .catch(function() {
+	          iconEl.textContent = '❌';
+	          textEl.textContent = 'Ошибка проверки';
+	          statusEl.classList.add('smtp-status--err');
+	        });
+	    }
+
+	    function checkSmtpStatus() {
+	      loadEmailStatus();
+	    }
+
+	    function sendTestEmail() {
+	      var btn = document.getElementById('sendTestEmailBtn');
+	      var inp = document.getElementById('testEmailTo');
+	      var result = document.getElementById('testEmailResult');
+	      result.className = 'smtp-test-result';
+	      result.style.display = 'none';
+	      btn.disabled = true;
+	      btn.textContent = 'Отправка...';
+
+	      fetch('/api/admin/test-email', {
+	        method: 'POST',
+	        headers: { 'Content-Type': 'application/json' },
+	        body: JSON.stringify({ to: inp.value.trim() || null })
+	      })
+	      .then(function(r) { return r.json(); })
+	      .then(function(data) {
+	        if (data.error) {
+	          result.textContent = '❌ ' + data.error;
+	          result.className = 'smtp-test-result smtp-test-result--err';
+	        } else {
+	          result.textContent = '✅ ' + data.message;
+	          result.className = 'smtp-test-result smtp-test-result--ok';
+	        }
+	        result.style.display = 'block';
+	      })
+	      .catch(function() {
+	        result.textContent = '❌ Ошибка соединения';
+	        result.className = 'smtp-test-result smtp-test-result--err';
+	        result.style.display = 'block';
+	      })
+	      .finally(function() {
+	        btn.disabled = false;
+	        btn.textContent = 'Отправить';
+	      });
+	    }
+
+	    // ====================== Logout ======================
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+      Auth.logout();
+    });
+
+    init();
+  </script>
+</body>
+</html>

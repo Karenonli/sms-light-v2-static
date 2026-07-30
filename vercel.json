@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/forgot", "destination": "/forgot-password.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  }
+}

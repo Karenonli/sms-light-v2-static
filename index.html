@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SMS Light — Купить виртуальные номера быстро и просто для Telegram, WhatsApp, Instagram и других сервисов. Моментальная доставка, низкие цены.">
+  <meta name="keywords" content="купить виртуальные номера, смс активация, виртуальный номер, telegram, whatsapp, sms light">
+  <meta name="robots" content="index, follow">
+  <title>SMS Light — Купить виртуальные номера быстро и просто</title>
+  <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Preloader — entrance animation before page content */
+    .preloader {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--black, #0a0a0a);
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    .preloader--hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .preloader__logo {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--white, #ffffff);
+      animation: prelogo 1.4s ease both;
+    }
+    .preloader__logo .green {
+      color: var(--green-500, #10b981);
+    }
+    .preloader__bar {
+      width: 0;
+      height: 3px;
+      background: var(--green-500, #10b981);
+      border-radius: 3px;
+      margin-top: 24px;
+      animation: prebar 0.8s ease 0.3s both;
+    }
+    .preloader__hint {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--gray-500, #666);
+      animation: fadeIn 0.6s ease 0.6s both;
+    }
+    @keyframes prelogo {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes prebar {
+      0% { width: 0; }
+      100% { width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Preloader -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo">
+      SMS<span class="green">Light</span>
+    </div>
+    <div class="preloader__bar"></div>
+    <div class="preloader__hint">Загружаем лучшие номера...</div>
+  </div>
+  <script>
+    (function() {
+      var preloader = document.getElementById('preloader');
+      function hidePreloader() {
+        preloader.classList.add('preloader--hide');
+        setTimeout(function() { preloader.style.display = 'none'; }, 600);
+      }
+      // Hide after animation plays, or immediately if too late
+      var elapsed = performance.now();
+      if (elapsed > 2000) { hidePreloader(); }
+      else { setTimeout(hidePreloader, Math.max(600, 1800 - elapsed)); }
+    })();
+  </script>
+  <!-- Header -->
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="logo">
+        <span class="logo__text">SMS<span class="logo__accent">Light</span></span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="index.html" class="nav__link">Главная</a>
+        <a href="index.html#services" class="nav__link">Услуги</a>
+        <a href="faq.html" class="nav__link">FAQ</a>
+        <a href="reviews.html" class="nav__link">Отзывы</a>
+        <a href="#" class="nav__link" onclick="Profile.openChat();return false">Чат</a>
+
+          <span id="navAuth">
+            <a href="login.html" class="nav__link nav__link--login">Войти</a>
+            <a href="register.html" class="btn btn--sm">Регистрация</a>
+          </span>
+      </nav>
+      <div class="header__actions">
+        <select class="currency-select" id="currencySelect" aria-label="Currency">
+          <option value="RUB" selected>₽ RUB</option>
+          <option value="USD">$ USD</option>
+        </select>
+        <button class="theme-toggle" id="themeToggle" onclick="Auth.toggleTheme()" aria-label="Сменить тему">
+          <svg class="theme-toggle__sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="theme-toggle__moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <span id="userMenu"></span>
+        <button class="burger" id="burger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="container">
+    <div class="hero__content">
+      <h1 class="hero__title">
+        Виртуальные номера
+        <span class="hero__accent">Моментально</span>
+      </h1>
+      <p class="hero__desc">
+        Купить виртуальные номера для регистрации в Telegram, WhatsApp и 200+ сервисах. Быстро, анонимно, безопасно.
+      </p>
+
+      <!-- Search -->
+      <div class="search-box">
+        <svg class="search-box__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="serviceSearch" class="search-box__input"
+          placeholder="Поиск сервиса... Telegram, WhatsApp, Instagram..."
+          autocomplete="off">
+        <div class="search-box__dropdown" id="heroSearchDropdown"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Order Section -->
+<section class="catalog reveal" id="services">
+  <div class="container">
+    <div class="catalog__header">
+      <h2 class="catalog__title">Виртуальные номера и готовые аккаунты Telegram</h2>
+      <span class="catalog__count" id="serviceCount">Выберите сервис и страну</span>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="order-tabs">
+      <button class="order-tab active" data-mode="virtual">Виртуальные номера</button>
+      <button class="order-tab" data-mode="telegram">Номера Telegram</button>
+    </div>
+
+    <!-- Panel: Virtual Numbers -->
+    <div class="order-panel active" id="orderPanel-virtual">
+      <div class="order-form">
+        <!-- Service searchable dropdown -->
+        <div class="order-field">
+          <div class="order-field__label">Сервис</div>
+          <div class="order-select" id="svcSelectWrap">
+            <div class="order-select__input-wrap">
+              <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" class="order-select__input" id="svcSearchInput" placeholder="Выберите сервис" autocomplete="off">
+            </div>
+            <div class="order-select__dropdown" id="svcDropdown">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Country searchable dropdown -->
+        <div class="order-field">
+          <div class="order-field__label">Страна</div>
+          <div class="order-select" id="countrySelectWrap">
+            <div class="order-select__input-wrap">
+              <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" class="order-select__input" id="countrySearchInput" placeholder="Выберите сервис для просмотра доступных стран" autocomplete="off" disabled>
+            </div>
+            <div class="order-select__dropdown" id="countryDropdown">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Price + Buy (appears after selection) -->
+        <div class="order-summary" id="orderSummary" style="display:none">
+          <div class="order-summary__price">
+            <span class="order-summary__label">Стоимость:</span>
+            <span class="order-summary__value" id="orderPriceValue">—</span>
+          </div>
+          <button class="btn btn--lg btn--full" onclick="Order.buy()">Купить номер</button>
+          <div class="order-summary__info" id="orderBuyInfo"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Telegram Numbers -->
+    <div class="order-panel" id="orderPanel-telegram">
+      <div class="order-form">
+        <!-- Sub-tabs for Telegram types -->
+        <div class="order-field">
+          <div class="order-field__label">Тип номера</div>
+          <div class="order-subtabs" id="tgTypeTabs">
+            <button class="order-subtab active" data-type="ready">Готовые номера Telegram</button>
+            <button class="order-subtab" data-type="physical">Физ.номера</button>
+            <button class="order-subtab" data-type="aged">Номера с отлежкой</button>
+          </div>
+        </div>
+
+        <!-- Country searchable dropdown -->
+        <div class="order-field">
+          <div class="order-field__label">Страна</div>
+          <div class="order-select" id="tgCountrySelectWrap">
+            <div class="order-select__input-wrap">
+              <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" class="order-select__input" id="tgCountryInput" placeholder="Выберите страну" autocomplete="off">
+            </div>
+            <div class="order-select__dropdown" id="tgCountryDropdown">
+              <!-- filled by JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="order-summary" id="tgOrderSummary" style="display:none">
+          <div class="order-summary__price">
+            <span class="order-summary__label">Стоимость:</span>
+            <span class="order-summary__value" id="tgOrderPriceValue">—</span>
+          </div>
+          <button class="btn btn--lg btn--full" onclick="Order.buyTelegram()">Купить аккаунт</button>
+          <div class="order-summary__info" id="tgOrderBuyInfo"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features reveal">
+  <div class="container">
+    <div class="features__grid anim-cards">
+      <div class="feature-card reveal-item">
+        <div class="feature-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h4 class="feature-card__title">Моментальная доставка</h4>
+        <p class="feature-card__desc">Получите номер сразу после подтверждения оплаты</p>
+      </div>
+      <div class="feature-card reveal-item">
+        <div class="feature-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h4 class="feature-card__title">Безопасная оплата</h4>
+        <p class="feature-card__desc">Оплата через Fride — ваши данные остаются скрытыми</p>
+      </div>
+      <div class="feature-card reveal-item">
+        <div class="feature-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h4 class="feature-card__title">30+ стран</h4>
+        <p class="feature-card__desc">Номера РФ, США, Европы и Азии</p>
+      </div>
+      <div class="feature-card reveal-item">
+        <div class="feature-card__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h4 class="feature-card__title">Лучшие цены</h4>
+        <p class="feature-card__desc">От 0.35 USD / 30 ₽ за номер</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Отзывы -->
+<section class="testimonials reveal" id="testimonials">
+  <div class="container">
+    <div class="testimonials__header">
+      <h2 class="testimonials__title">Отзывы клиентов</h2>
+      <a href="reviews.html" class="testimonials__all">Читать все отзывы →</a>
+    </div>
+    <div class="testimonials__grid anim-cards" id="testimonialsGrid">
+      <div class="testimonials__loading">Загрузка отзывов...</div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer reveal">
+  <div class="container">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <span class="footer__logo">SMS<span class="logo__accent">Light</span></span>
+        <p class="footer__tagline">Купить виртуальные номера быстро и просто</p>
+      </div>
+      <div class="footer__copy">&copy; 2026 SMS Light. Все права защищены.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/chat-server.js"></script>
+<script src="js/profile.js"></script>
+
+  </main>
+
+  <script>
+    // === Order System ===
+    window.Order = (function() {
+      var session = null;
+      var selectedService = null;
+      var selectedTelegramType = 'ready';
+      var selectedCountry = null;
+      var tgSelectedCountry = null;
+      var currentMode = 'virtual';
+      var svcDropdownOpen = false;
+      var countryDropdownOpen = false;
+      var tgCountryDropdownOpen = false;
+
+      function getSession() {
+        session = Auth.getSession();
+        return session;
+      }
+
+      // ======== Mode Switching ========
+      function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.order-tab').forEach(function(t) {
+          t.classList.toggle('active', t.dataset.mode === mode);
+        });
+        document.querySelectorAll('.order-panel').forEach(function(p) {
+          p.classList.toggle('active', p.id === 'orderPanel-' + mode);
+        });
+        if (mode === 'virtual') {
+          initServiceDropdown();
+          document.getElementById('serviceCount').textContent = 'Выберите сервис и страну';
+        } else {
+          initTgCountryDropdown();
+          document.getElementById('serviceCount').textContent = 'Выберите тип и страну';
+        }
+      }
+
+      // ======== Searchable Dropdown: Services ========
+      function initServiceDropdown() {
+        var input = document.getElementById('svcSearchInput');
+        var dd = document.getElementById('svcDropdown');
+        if (!input || !dd) return;
+        renderSvcDropdown('');
+
+        input.addEventListener('focus', function() {
+          renderSvcDropdown(this.value);
+          dd.classList.add('open');
+          svcDropdownOpen = true;
+        });
+        input.addEventListener('input', function() {
+          renderSvcDropdown(this.value);
+          dd.classList.add('open');
+          svcDropdownOpen = true;
+        });
+        input.addEventListener('blur', function() {
+          setTimeout(function() { dd.classList.remove('open'); svcDropdownOpen = false; }, 200);
+        });
+      }
+
+      function renderSvcDropdown(query) {
+        var dd = document.getElementById('svcDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var services = Data.getServices();
+        var html = '';
+        for (var i = 0; i < services.length; i++) {
+          var s = services[i];
+          var match = !query || s.name.toLowerCase().indexOf(query) !== -1 || s.id.indexOf(query) !== -1;
+          if (!match) continue;
+          var selected = selectedService && selectedService.id === s.id ? ' class="dd-item--selected"' : '';
+          html += '<div' + selected + ' data-id="' + s.id + '" data-price="' + s.price + '" onmousedown="Order.pickService(\'' + s.id + '\')">' +
+            '<span class="dd-item__logo">' + getLogo(s.id) + '</span>' +
+            '<span class="dd-item__name">' + esc(s.name) + '</span>' +
+            '<span class="dd-item__price">' + fmtPrice(s.price) + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Ничего не найдено</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickService(id) {
+        selectedService = Data.getService(id);
+        if (!selectedService) return;
+
+        var input = document.getElementById('svcSearchInput');
+        input.value = selectedService.name;
+        document.getElementById('svcDropdown').classList.remove('open');
+        svcDropdownOpen = false;
+
+        // Enable country search
+        initCountryDropdown();
+
+        // Show summary with price
+        showSummary('order');
+      }
+
+      // ======== Searchable Dropdown: Countries (Virtual) ========
+      function initCountryDropdown() {
+        var input = document.getElementById('countrySearchInput');
+        var dd = document.getElementById('countryDropdown');
+        if (!input || !dd) return;
+
+        input.disabled = false;
+        input.placeholder = 'Выберите страну';
+        renderCountryDropdown('');
+
+        // Re-bind events (remove old ones by cloning or just re-attach)
+        input.onfocus = function() {
+          renderCountryDropdown(this.value);
+          dd.classList.add('open');
+          countryDropdownOpen = true;
+        };
+        input.oninput = function() {
+          renderCountryDropdown(this.value);
+          dd.classList.add('open');
+          countryDropdownOpen = true;
+        };
+        input.onblur = function() {
+          setTimeout(function() { dd.classList.remove('open'); countryDropdownOpen = false; }, 200);
+        };
+      }
+
+      function renderCountryDropdown(query) {
+        var dd = document.getElementById('countryDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var countries = Data.getCountries();
+        var html = '';
+        for (var i = 0; i < countries.length; i++) {
+          var c = countries[i];
+          if (query && c.name.toLowerCase().indexOf(query) === -1) continue;
+          var selected = selectedCountry === c.name ? ' class="dd-item--selected"' : '';
+          var iso = Data.getCountryIso(c.name);
+          var flagHtml = iso ? '<img src="https://flagcdn.com/24x18/' + iso + '.png" alt="" class="dd-item__flag-img" width="24" height="18">' : '🌍';
+          html += '<div' + selected + ' data-country="' + escAttr(c.name) + '" onmousedown="Order.pickCountry(\'' + escAttr(c.name) + '\')">' +
+            flagHtml +
+            '<span class="dd-item__name">' + esc(c.name) + '</span>' +
+            '<span class="dd-item__code">' + c.code + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Нет доступных стран</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickCountry(country) {
+        selectedCountry = country;
+        var input = document.getElementById('countrySearchInput');
+        var countries = Data.getCountries();
+        var found = null;
+        for (var i = 0; i < countries.length; i++) {
+          if (countries[i].name === country) { found = countries[i]; break; }
+        }
+        input.value = found ? found.name + ' (' + found.code + ')' : country;
+        document.getElementById('countryDropdown').classList.remove('open');
+        countryDropdownOpen = false;
+        showSummary('order');
+      }
+
+      // ======== Summary (Price + Buy) ========
+      function showSummary(panel) {
+        if (panel === 'order') {
+          if (!selectedService || !selectedCountry) return;
+          document.getElementById('orderSummary').style.display = '';
+          document.getElementById('orderPriceValue').textContent = fmtPrice(selectedService.price);
+          document.getElementById('orderBuyInfo').textContent = '';
+          var isoForSummary = Data.getCountryIso(selectedCountry);
+          var flagImgSummary = isoForSummary ? '<img src="https://flagcdn.com/24x18/' + isoForSummary + '.png" alt="" style="width:20px;height:15px;vertical-align:middle;border-radius:2px">' : '🌍';
+          document.getElementById('serviceCount').innerHTML = esc(selectedService.name) + ' — ' + flagImgSummary + ' ' + esc(selectedCountry);
+        } else {
+          if (!tgSelectedCountry) return;
+          document.getElementById('tgOrderSummary').style.display = '';
+          document.getElementById('tgOrderPriceValue').textContent = fmtPrice(49);
+          document.getElementById('tgOrderBuyInfo').textContent = '';
+        }
+      }
+
+      // ======== Buy: Virtual Number ========
+      function buy() {
+        if (!getSession()) { window.location.href = 'login.html'; return; }
+        if (!selectedService || !selectedCountry) {
+          document.getElementById('orderBuyInfo').textContent = 'Выберите сервис и страну';
+          return;
+        }
+        var balance = Data.getBalance(session.id);
+        if (balance < selectedService.price) {
+          document.getElementById('orderBuyInfo').textContent = 'Недостаточно средств. Пополните баланс в личном кабинете.';
+          return;
+        }
+        Data.createPurchase(session.id, 'virtual', selectedService.name, selectedCountry, selectedService.price, 'RUB');
+        Data.topUp(session.id, -selectedService.price);
+        notifyAdminOfPurchase(session, selectedService.name, selectedCountry, selectedService.price);
+        document.getElementById('orderBuyInfo').textContent = 'Номер заказан! Ожидайте номер в личном кабинете.';
+        document.getElementById('orderBuyInfo').style.color = 'var(--color-accent)';
+      }
+
+      // ======== Telegram Types ========
+      function selectTelegramType(type) {
+        selectedTelegramType = type;
+        document.querySelectorAll('.order-subtab').forEach(function(t) {
+          t.classList.toggle('active', t.dataset.type === type);
+        });
+        // Reset country selection
+        tgSelectedCountry = null;
+        initTgCountryDropdown();
+        document.getElementById('tgOrderSummary').style.display = 'none';
+      }
+
+      // ======== Searchable Dropdown: Countries (Telegram) ========
+      function initTgCountryDropdown() {
+        var input = document.getElementById('tgCountryInput');
+        var dd = document.getElementById('tgCountryDropdown');
+        if (!input || !dd) return;
+
+        input.disabled = false;
+        input.value = '';
+        input.placeholder = 'Выберите страну';
+        renderTgCountryDropdown('');
+
+        input.onfocus = function() {
+          renderTgCountryDropdown(this.value);
+          dd.classList.add('open');
+          tgCountryDropdownOpen = true;
+        };
+        input.oninput = function() {
+          renderTgCountryDropdown(this.value);
+          dd.classList.add('open');
+          tgCountryDropdownOpen = true;
+        };
+        input.onblur = function() {
+          setTimeout(function() { dd.classList.remove('open'); tgCountryDropdownOpen = false; }, 200);
+        };
+      }
+
+      function renderTgCountryDropdown(query) {
+        var dd = document.getElementById('tgCountryDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var countries = Data.getCountries();
+        var html = '';
+        for (var i = 0; i < countries.length; i++) {
+          var c = countries[i];
+          if (query && c.name.toLowerCase().indexOf(query) === -1) continue;
+          var iso = Data.getCountryIso(c.name);
+          var flagHtml = iso ? '<img src="https://flagcdn.com/24x18/' + iso + '.png" alt="" class="dd-item__flag-img" width="24" height="18">' : '🌍';
+          html += '<div data-country="' + escAttr(c.name) + '" onmousedown="Order.pickTgCountry(\'' + escAttr(c.name) + '\')">' +
+            flagHtml +
+            '<span class="dd-item__name">' + esc(c.name) + '</span>' +
+            '<span class="dd-item__code">' + c.code + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Нет доступных стран</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickTgCountry(country) {
+        tgSelectedCountry = country;
+        var input = document.getElementById('tgCountryInput');
+        var countries = Data.getCountries();
+        var found = null;
+        for (var i = 0; i < countries.length; i++) {
+          if (countries[i].name === country) { found = countries[i]; break; }
+        }
+        input.value = found ? found.name + ' (' + found.code + ')' : country;
+        document.getElementById('tgCountryDropdown').classList.remove('open');
+        tgCountryDropdownOpen = false;
+        showSummary('tg');
+      }
+
+      // ======== Buy: Telegram ========
+      function buyTelegram() {
+        if (!getSession()) { window.location.href = 'login.html'; return; }
+        if (!tgSelectedCountry) {
+          document.getElementById('tgOrderBuyInfo').textContent = 'Выберите страну';
+          return;
+        }
+        var types = Data.getTelegramTypes();
+        var typeName = 'Готовые номера Telegram';
+        for (var i = 0; i < types.length; i++) {
+          if (types[i].id === selectedTelegramType) typeName = types[i].name;
+        }
+        var price = 49;
+        var balance = Data.getBalance(session.id);
+        if (balance < price) {
+          document.getElementById('tgOrderBuyInfo').textContent = 'Недостаточно средств. Пополните баланс в личном кабинете.';
+          return;
+        }
+        Data.createPurchase(session.id, 'telegram', typeName, tgSelectedCountry, price, 'RUB');
+        Data.topUp(session.id, -price);
+        notifyAdminOfPurchase(session, typeName, tgSelectedCountry, price);
+        document.getElementById('tgOrderBuyInfo').textContent = 'Аккаунт заказан! Ожидайте в личном кабинете.';
+        document.getElementById('tgOrderBuyInfo').style.color = 'var(--color-accent)';
+      }
+
+      // ======== Уведомление админа в чат (как FunPay) ========
+      function notifyAdminOfPurchase(session, serviceName, country, price) {
+        var users = Auth.getUsers();
+        var adminId = null;
+        var adminName = 'Администратор';
+        for (var i = 0; i < users.length; i++) {
+          if (users[i].is_admin === 1) {
+            adminId = users[i].id;
+            adminName = users[i].name;
+            break;
+          }
+        }
+        if (!adminId || !session) return;
+        Data.sendMessage(
+          session.id, session.name,
+          adminId, adminName,
+          '🛒 Заказ: ' + serviceName + ', ' + country + ' — ' + price + ' ₽'
+        );
+      }
+
+      // ======== Utilities ========
+      function getLogo(id) {
+        var map = {
+          telegram:'TG', whatsapp:'WA', viber:'VB', discord:'DC', signal:'SG',
+          wechat:'WC', line:'LN', skype:'SK', instagram:'IG', facebook:'FB',
+          'x-twitter':'X', tiktok:'TK', snapchat:'SC', linkedin:'LI',
+          pinterest:'PI', 'telegram-premium':'TP', binance:'BN', bybit:'BB',
+          huobi:'HB', okx:'OK', coinbase:'CB', kraken:'KR', gateio:'GT',
+          kucoin:'KC', mexc:'MX', '888poker':'88', ggpoker:'GG',
+          'global-poker':'GP', pokerstars:'PS', partypoker:'PP', bet365:'B3',
+          '1xbet':'1X', 'william-hill':'WH', draftkings:'DK', fanduel:'FD',
+          sberbank:'SB', tinkoff:'TB', raiffeisen:'RZ', paypal:'PP',
+          wise:'WS', revolut:'RV', webmoney:'WM', qiwi:'QI', yoomoney:'YM',
+          netflix:'NF', spotify:'SF', twitch:'TW', steam:'SM', 'epic-games':'EG',
+          xbox:'XB', playstation:'PS', 'riot-games':'RG', ubisoft:'UB',
+          minecraft:'MC', pubg:'PG', 'free-fire':'FF', booking:'BC',
+          uber:'UB', bolt:'BT', airbnb:'AB', avito:'AV', olx:'OX',
+          craigslist:'CL', google:'GO', microsoft:'MS', apple:'AP',
+          '22bet':'2B', '2dehands':'2H', aol:'AO', adidas:'AD', adobe:'AE',
+          aliexpress:'AX', alibaba:'AL', audi:'AU', 'battle-net':'BA',
+          bing:'BI', bumble:'BU', chatgpt:'CH', citymobil:'CM', dhl:'DH',
+          derik:'DR', doordash:'DD', ebay:'EB', fiverr:'FV', foodpanda:'FP',
+          gett:'GE', glovo:'GL', happn:'HP', hinge:'HI', icq:'IC',
+          indeed:'IN', kakaotalk:'KT', 'kontakt-bar':'KB', linode:'LD',
+          mamba:'MB', nike:'NK', okcupid:'OC', openai:'OA',
+          perekrestok:'PK', 'plenty-of-fish':'PF', protonmail:'PM',
+          pyaterochka:'PY', qq:'QQ', rambler:'RB', skout:'SO',
+          tinder:'TD', twilio:'TL', vk:'VK', wargaming:'WG',
+          wolt:'WL', yahoo:'YH', youtube:'YT', zara:'ZA'
+        };
+        return map[id] || (id.charAt(0).toUpperCase() + id.charAt(1).toUpperCase());
+      }
+
+      function esc(str) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(str));
+        return d.innerHTML;
+      }
+
+      function escAttr(str) {
+        return str.replace(/'/g, '\\\'');
+      }
+
+      function fmtPrice(price) {
+        return window._currency === 'USD'
+          ? '$' + (price * 0.011).toFixed(2)
+          : price + ' ₽';
+      }
+
+      function refreshPrices() {
+        // Re-render dropdowns if open
+        if (svcDropdownOpen) renderSvcDropdown(document.getElementById('svcSearchInput').value);
+        if (countryDropdownOpen) renderCountryDropdown(document.getElementById('countrySearchInput').value);
+        if (tgCountryDropdownOpen) renderTgCountryDropdown(document.getElementById('tgCountryInput').value);
+        // Update displayed prices
+        var pv = document.getElementById('orderPriceValue');
+        if (pv && selectedService) pv.textContent = fmtPrice(selectedService.price);
+        var pt = document.getElementById('tgOrderPriceValue');
+        if (pt) pt.textContent = fmtPrice(49);
+        // Update service dropdown prices
+        document.querySelectorAll('#svcDropdown .dd-item__price').forEach(function(el) {
+          var parent = el.parentNode;
+          if (parent && parent.dataset && parent.dataset.price) {
+            el.textContent = fmtPrice(parseFloat(parent.dataset.price));
+          }
+        });
+      }
+
+      // ======== Init ========
+      function init() {
+        initServiceDropdown();
+        // Pre-populate Telegram country dropdown
+        initTgCountryDropdown();
+      }
+
+      // ======== Tab bindings (attach after HTML is ready) ========
+      function bindTabs() {
+        document.querySelectorAll('.order-tab').forEach(function(t) {
+          t.onclick = function() { setMode(this.dataset.mode); };
+        });
+        document.querySelectorAll('.order-subtab').forEach(function(t) {
+          t.onclick = function() { selectTelegramType(this.dataset.type); };
+        });
+      }
+
+      return {
+        init: init,
+        bindTabs: bindTabs,
+        setMode: setMode,
+        pickService: pickService,
+        pickCountry: pickCountry,
+        pickTgCountry: pickTgCountry,
+        buy: buy,
+        buyTelegram: buyTelegram,
+        selectTelegramType: selectTelegramType,
+        refreshPrices: refreshPrices
+      };
+    })();
+
+    // === Init order ===
+    document.addEventListener('DOMContentLoaded', function() {
+      Order.bindTabs();
+      Order.init();
+    });
+
+    // === Currency switcher ===
+    (function() {
+      var RATE = 0.011;
+      var select = document.getElementById('currencySelect');
+      if (!select) return;
+
+      window._currency = 'RUB';
+
+      var saved = document.cookie.replace(/(?:(?:^|.*;\s*)currency\s*=\s*([^;]*).*$)|^.*$/, '$1');
+      if (saved === 'USD') {
+        select.value = 'USD';
+        window._currency = 'USD';
+      }
+
+      function applyCurrency(currency) {
+        window._currency = currency;
+        if (typeof Order !== 'undefined') {
+          Order.refreshPrices();
+        }
+      }
+
+      select.addEventListener('change', function() {
+        document.cookie = 'currency=' + this.value + '; path=/; max-age=86400';
+        applyCurrency(this.value);
+      });
+    })();
+  </script>
+
+  <!-- Main page testimonials -->
+  <script>
+  (function() {
+    var grid = document.getElementById('testimonialsGrid');
+    if (!grid || typeof Data === 'undefined') return;
+    var reviews = Data.getReviews(6);
+    if (!reviews || reviews.length === 0) { grid.innerHTML = ''; return; }
+
+    function renderStars(rating) {
+      var s = '';
+      for (var i = 0; i < 5; i++) s += i < rating ? '<span class="star--filled">★</span>' : '<span class="star--empty">☆</span>';
+      return s;
+    }
+
+    function escHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    var html = '';
+    for (var i = 0; i < reviews.length; i++) {
+      var r = reviews[i];
+      html += '<div class="testimonial-card reveal-item" style="animation-delay:' + (i * 0.08) + 's">' +
+        '<div class="testimonial-card__top">' +
+          '<span class="testimonial-card__author">' + escHtml(r.author) + '</span>' +
+          '<span class="testimonial-card__rating">' + renderStars(r.rating) + '</span>' +
+        '</div>' +
+        '<div class="testimonial-card__service">' + escHtml(r.service) + '</div>' +
+        '<div class="testimonial-card__text">' + escHtml(r.text) + '</div>' +
+      '</div>';
+    }
+    grid.innerHTML = html;
+  })();
+  </script>
+
+  <script src="js/search.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+  // Запуск синхронизации чата, если пользователь авторизован
+  (function() {
+    var session = Auth && Auth.getSession();
+    if (session) {
+      ChatServer.startSync();
+    }
+  })();
+  </script>
+</body>
+</html>
