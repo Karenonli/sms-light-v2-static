@@ -111,12 +111,27 @@ function emailTemplate(title, iconSvg, heading, bodyHtml, extraOpts) {
     : '';
 
   const codeBlock = opt.code
-    ? `<tr><td style="padding:0 0 32px;text-align:center;">
-        <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:14px;padding:24px 20px;display:inline-block;min-width:200px;">
-          <div style="font-size:13px;color:#6b7280;font-family:'Inter',Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">${opt.codeLabel || 'Код подтверждения'}</div>
-          <div style="font-size:40px;font-weight:800;color:#10b981;font-family:'Courier New',Courier,monospace;letter-spacing:10px;line-height:1.2;">${opt.code}</div>
-        </div>
-       </td></tr>`
+    ? (function() {
+        // Код как 6 отдельных ячеек (как поля ввода на странице регистрации)
+        const digits = String(opt.code).split('');
+        const cells = digits.map(d =>
+          `<td style="padding:0 4px;">
+             <div style="width:46px;height:58px;background:#0d0d0d;border:1.5px solid rgba(16,185,129,0.35);border-radius:12px;text-align:center;line-height:58px;font-size:28px;font-weight:800;color:#34d399;font-family:'Courier New',Courier,monospace;box-shadow:0 0 14px rgba(16,185,129,0.12);">
+               ${d}
+             </div>
+           </td>`
+        ).join('');
+        return `<tr><td style="padding:4px 0 28px;text-align:center;">
+          <div style="font-size:12px;color:#9ca3af;font-family:'Inter',Arial,Helvetica,sans-serif;text-transform:uppercase;letter-spacing:2.5px;margin-bottom:16px;">${opt.codeLabel || 'Код подтверждения'}</div>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr>${cells}</tr>
+          </table>
+          <div style="margin-top:16px;font-size:12px;color:#6b7280;font-family:'Inter',Arial,Helvetica,sans-serif;">
+            Не получается ввести по цифрам — вставьте целиком:
+            <span style="color:#10b981;font-family:'Courier New',Courier,monospace;font-weight:700;letter-spacing:2px;">${opt.code}</span>
+          </div>
+        </td></tr>`;
+      })()
     : '';
 
   const noteHtml = opt.note
@@ -158,12 +173,12 @@ function emailTemplate(title, iconSvg, heading, bodyHtml, extraOpts) {
 
           <!-- Card -->
           <tr>
-            <td style="background:#141414;border:1px solid #1f1f1f;border-radius:20px;padding:44px 40px;">
+            <td style="background:#141414;border:1px solid #1f1f1f;border-radius:20px;padding:44px 40px;box-shadow:0 24px 64px rgba(0,0,0,0.45), 0 0 48px rgba(16,185,129,0.09);">
 
               <!-- Decorative top line -->
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 32px;width:64px;">
                 <tr>
-                  <td style="width:40px;height:3px;background:#10b981;border-radius:2px;display:block;"></td>
+                  <td style="height:3px;background:#10b981;border-radius:2px;font-size:0;line-height:0;box-shadow:0 0 8px rgba(16,185,129,0.6);">&nbsp;</td>
                 </tr>
               </table>
 

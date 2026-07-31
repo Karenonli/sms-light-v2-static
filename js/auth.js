@@ -35,6 +35,126 @@
       localStorage.removeItem(SESSION_KEY);
     },
 
+    // ===== Локальный демо-режим (file://) =====
+    // Когда страница открыта через file://, fetch('/api/*') не работает.
+    // Тогда регистрация/вход работают на localStorage — сайт остаётся «живым».
+    LOCAL_USERS_KEY: 'sms_local_users',
+    LOCAL_CODES_KEY: 'sms_local_codes',
+
+    isLocalMode: function() {
+      return location.protocol === 'file:';
+    },
+
+    getLocalUsers: function() {
+      try { return JSON.parse(localStorage.getItem(this.LOCAL_USERS_KEY)) || {}; }
+      catch(e) { return {}; }
+    },
+    setLocalUsers: function(users) {
+      try { localStorage.setItem(this.LOCAL_USERS_KEY, JSON.stringify(users)); } catch(e) {}
+    },
+    getLocalCodes: function() {
+      try { return JSON.parse(localStorage.getItem(this.LOCAL_CODES_KEY)) || {}; }
+      catch(e) { return {}; }
+    },
+    setLocalCodes: function(codes) {
+      try { localStorage.setItem(this.LOCAL_CODES_KEY, JSON.stringify(codes)); } catch(e) {}
+    },
+    _genCode: function() {
+      var s = '';
+      for (var i = 0; i < 6; i++) s += Math.floor(Math.random() * 10);
+      return s;
+    },
+
+    _isAdminEmail: function(email) {
+      var e = (email || '').trim().toLowerCase();
+      return ['justxirrez@inbox.ru', 'mikoto_11@list.ru'].indexOf(e) !== -1;
+    },
+
+    localRegister: function(name, email, password) {
+      var users = this.getLocalUsers();
+      email = (email || '').trim().toLowerCase();
+      if (users[email]) return { error: 'Пользователь с таким email уже существует' };
+      var user = {
+        id: Date.now(),
+        name: name,
+        nickname: '',
+        email: email,
+        password: password,
+        is_admin: this._isAdminEmail(email),
+        verified: false,
+        created_at: new Date().toISOString()
+      };
+      users[email] = user;
+      this.setLocalUsers(users);
+      var code = this._genCode();
+      var codes = this.getLocalCodes();
+      codes[email] = code;
+      this.setLocalCodes(codes);
+      return { ok: true, dev_code: code };
+    },
+
+    localVerify: function(email, code) {
+      email = (email || '').trim().toLowerCase();
+      var codes = this.getLocalCodes();
+      if (!codes[email] || codes[email] !== (code || '').trim()) {
+        return { error: 'Неверный код подтверждения' };
+      }
+      delete codes[email];
+      this.setLocalCodes(codes);
+      var users = this.getLocalUsers();
+      var u = users[email];
+      if (!u) return { error: 'Пользователь не найден' };
+      u.verified = true;
+      this.setLocalUsers(users);
+      var user = { id: u.id, name: u.name, nickname: u.nickname || '', email: u.email, is_admin: !!u.is_admin || this._isAdminEmail(u.email) };
+      this.setSession(user);
+      return { ok: true, user: user };
+    },
+
+    localLogin: function(email, password) {
+      email = (email || '').trim().toLowerCase();
+      var users = this.getLocalUsers();
+      var u = users[email];
+      if (!u || u.password !== password) return { error: 'Неверный email или пароль' };
+      if (!u.verified) {
+        var res = { error: 'Email не подтверждён', needs_verification: true, email: u.email };
+        var codes = this.getLocalCodes();
+        if (codes[u.email]) res.dev_code = codes[u.email];
+        return res;
+      }
+      var user = { id: u.id, name: u.name, nickname: u.nickname || '', email: u.email, is_admin: !!u.is_admin || this._isAdminEmail(u.email) };
+      this.setSession(user);
+      return { ok: true, user: user };
+    },
+
+    localForgot: function(email) {
+      email = (email || '').trim().toLowerCase();
+      var users = this.getLocalUsers();
+      var u = users[email];
+      if (!u) return { error: 'Пользователь с таким email не найден' };
+      var code = this._genCode();
+      var codes = this.getLocalCodes();
+      codes[email] = code;
+      this.setLocalCodes(codes);
+      return { ok: true, dev_code: code };
+    },
+
+    localReset: function(email, code, password) {
+      email = (email || '').trim().toLowerCase();
+      var codes = this.getLocalCodes();
+      if (!codes[email] || codes[email] !== (code || '').trim()) {
+        return { error: 'Неверный код' };
+      }
+      delete codes[email];
+      this.setLocalCodes(codes);
+      var users = this.getLocalUsers();
+      var u = users[email];
+      if (!u) return { error: 'Пользователь не найден' };
+      u.password = password;
+      this.setLocalUsers(users);
+      return { ok: true };
+    },
+
     // ===== Register (сервер) =====
     register: function(name, email, password) {
       // Устаревший синхронный метод — теперь используйте fetch('/api/auth/register')
@@ -85,7 +205,7 @@
 
     // ===== Seed admins (больше не нужно — сервер сам создаёт) =====
     seedAdmin: function() {
-      // Сервер автоматически создаёт mikoto_11@list.ru при старте
+      // Админы: justxirrez@inbox.ru и mikoto_11@list.ru — создаются/повышаются в initDb (server) и localRegister (file://)
     },
 
     // ===== Navbar =====

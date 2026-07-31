@@ -87,7 +87,7 @@
     .pw-wrap { position: relative; }
     .pw-toggle {
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      background: none; border: none; color: var(--gray-400); cursor: pointer;
       padding: 4px; line-height: 1; display: flex;
     }
     .pw-toggle:hover { color: var(--gray-200); }
@@ -96,7 +96,7 @@
       text-align: center;
       margin-top: 20px;
       font-size: 14px;
-      color: var(--text-muted);
+      color: var(--gray-300);
     }
     .reg-card__footer a {
       color: var(--green);
@@ -162,16 +162,24 @@
       position: relative;
       pointer-events: none;
       color: transparent !important;
+      text-shadow: none !important;
     }
-    .btn--loading::after {
+    /* Перебиваем блик .btn::after (shine): у него left:-70%→130% и skewX(-20deg)
+       на hover — спиннер из-за этого уезжал вправо и наклонялся. */
+    .btn--loading::after,
+    .btn--loading:hover::after {
       content: '';
       position: absolute;
       width: 20px; height: 20px;
       top: 50%; left: 50%;
+      right: auto;
       margin: -10px 0 0 -10px;
       border: 2px solid rgba(255,255,255,0.3);
       border-top-color: #fff;
       border-radius: 50%;
+      background: transparent;
+      transform: none !important;
+      transition: none !important;
       animation: spin 0.6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -187,7 +195,7 @@
       align-items: center;
       gap: 4px;
       font-size: 13px;
-      color: var(--text-muted);
+      color: var(--gray-300);
       text-decoration: none;
       margin-bottom: 20px;
     }
@@ -220,7 +228,7 @@
     [data-theme="light"] .pw-toggle:hover { color: var(--gray-700); }
     [data-theme="light"] .back-link { color: var(--gray-400); }
     [data-theme="light"] .back-link:hover { color: var(--gray-700); }
-    [data-theme="light"] .reg-card__footer { color: var(--gray-500); }
+    [data-theme="light"] .reg-card__footer { color: var(--gray-400); }
 
     @media (max-width: 768px) {
       .reg-wrap { flex-direction: column; padding: 24px 16px; gap: 24px; }
@@ -413,13 +421,7 @@
     btn.classList.add('btn--loading');
     btn.textContent = '';
 
-    fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, password: pw })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    function showVerify(data, emailFailedText) {
       btn.classList.remove('btn--loading');
       if (data.error) {
         err.textContent = data.error;
@@ -429,8 +431,14 @@
       }
 
       _regEmail = email;
+
+      // Switch to verification (сначала setup, чтобы он не стёр код ниже)
+      document.getElementById('regFormBox').style.display = 'none';
+      document.getElementById('verifyBox').style.display = 'block';
+      setupCodeInputs();
+
       if (data.email_failed) {
-        document.getElementById('verifyEmailText').innerHTML = '⚠️ Письмо не отправлено.<br>Но вы можете использовать код ниже:';
+        document.getElementById('verifyEmailText').innerHTML = emailFailedText || '⚠️ Письмо не отправлено.<br>Но вы можете использовать код ниже:';
         // Show code directly in the inputs for convenience
         var code = data.dev_code || '';
         if (code) {
@@ -444,13 +452,33 @@
       } else {
         document.getElementById('verifyEmailText').textContent = 'Код отправлен на ' + email;
       }
+    }
 
-      // Switch to verification
-      document.getElementById('regFormBox').style.display = 'none';
-      document.getElementById('verifyBox').style.display = 'block';
-      setupCodeInputs();
+    // Локальный режим: страница открыта через file:// — сервера нет, используем localStorage
+    if (window.Auth && Auth.isLocalMode()) {
+      var res = Auth.localRegister(name, email, pw);
+      res.email_failed = true;
+      showVerify(res, 'Демо-режим (файл открыт без сервера).<br>Ваш код подтверждения:');
+      return;
+    }
+
+    fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, email: email, password: pw })
     })
+    .then(function(r) { return r.json(); })
+    .then(showVerify)
     .catch(function() {
+      // Сервер недоступен — fallback на локальный демо-режим
+      if (window.Auth && Auth.localRegister) {
+        var res = Auth.localRegister(name, email, pw);
+        if (res && !res.error) {
+          res.email_failed = true;
+          showVerify(res, 'Демо-режим (сервер недоступен).<br>Ваш код подтверждения:');
+          return;
+        }
+      }
       btn.classList.remove('btn--loading');
       err.textContent = 'Ошибка соединения с сервером';
       err.style.display = 'block';
@@ -509,13 +537,7 @@
     btn.classList.add('btn--loading');
     btn.textContent = '';
 
-    fetch('/api/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: _regEmail, code: code })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    function verifyOk(data) {
       btn.classList.remove('btn--loading');
       if (data.error) {
         err.textContent = data.error;
@@ -530,8 +552,30 @@
         localStorage.setItem('sms_session', JSON.stringify(data.user));
       }
       window.location.href = data.is_admin ? 'admin.html' : 'index.html';
+    }
+
+    // Локальный режим (file://)
+    if (window.Auth && Auth.isLocalMode()) {
+      verifyOk(Auth.localVerify(_regEmail, code));
+      return;
+    }
+
+    fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: _regEmail, code: code })
     })
+    .then(function(r) { return r.json(); })
+    .then(verifyOk)
     .catch(function() {
+      // Fallback на локальный режим при недоступном сервере
+      if (window.Auth && Auth.localVerify) {
+        var res = Auth.localVerify(_regEmail, code);
+        if (res && !res.error) {
+          verifyOk(res);
+          return;
+        }
+      }
       btn.classList.remove('btn--loading');
       err.textContent = 'Ошибка сервера';
       err.style.display = 'block';
@@ -548,6 +592,30 @@
     link.style.pointerEvents = 'none';
     link.style.opacity = '0.5';
 
+    function showNewCode(code) {
+      document.getElementById('verifyEmailText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + (code || '') + '</strong>.';
+      document.querySelectorAll('#codeInputs .code-input').forEach(function(inp) { inp.value = ''; inp.classList.remove('filled'); });
+      document.querySelector('#codeInputs .code-input').focus();
+    }
+
+    function resendLocal() {
+      if (!(window.Auth && Auth.getLocalUsers && Auth.getLocalUsers()[_regEmail])) return false;
+      var newCode = Auth._genCode();
+      var codes = Auth.getLocalCodes();
+      codes[_regEmail] = newCode;
+      Auth.setLocalCodes(codes);
+      showNewCode(newCode);
+      return true;
+    }
+
+    // Локальный режим (file://)
+    if (window.Auth && Auth.isLocalMode()) {
+      resendLocal();
+      link.style.pointerEvents = '';
+      link.style.opacity = '';
+      return;
+    }
+
     fetch('/api/auth/resend-verification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -556,12 +624,13 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.email_failed) {
-        document.getElementById('verifyEmailText').textContent = '⚠️ Письмо не отправлено. Код: ' + (data.dev_code || '') + '.';
+        showNewCode(data.dev_code);
       }
-      document.querySelectorAll('#codeInputs .code-input').forEach(function(inp) { inp.value = ''; inp.classList.remove('filled'); });
-      document.querySelector('#codeInputs .code-input').focus();
     })
-    .catch(function() {})
+    .catch(function() {
+      // Fallback на локальный режим при недоступном сервере
+      resendLocal();
+    })
     .finally(function() {
       link.style.pointerEvents = '';
       link.style.opacity = '';

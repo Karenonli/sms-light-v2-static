@@ -145,17 +145,11 @@
       return;
     }
 
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    function loginOk(data) {
       if (data.error) {
         if (data.needs_verification) {
           btn.disabled = false; btn.textContent = 'Войти';
-          showVerifyBanner(data.email);
+          showVerifyBanner(data.email, data.dev_code);
           return;
         }
         err.textContent = data.error;
@@ -184,20 +178,54 @@
         .catch(function() {
           window.location.href = data.is_admin ? 'admin.html' : 'index.html';
         });
+    }
+
+    // Локальный режим: страница открыта через file:// — сервера нет, используем localStorage
+    if (window.Auth && Auth.isLocalMode()) {
+      loginOk(Auth.localLogin(email, password));
+      return;
+    }
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
     })
+    .then(function(r) { return r.json(); })
+    .then(loginOk)
     .catch(function() {
+      // Сервер недоступен — fallback на локальный демо-режим
+      if (window.Auth && Auth.localLogin) {
+        var res = Auth.localLogin(email, password);
+        if (res && (res.ok || res.error)) {
+          loginOk(res);
+          return;
+        }
+      }
       err.textContent = 'Ошибка соединения с сервером';
       err.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Войти';
     });
   });
 
-  function showVerifyBanner(email) {
+  function showVerifyBanner(email, devCode) {
     _loginEmail = email;
-    document.getElementById('verifyBannerText').textContent = 'Код отправлен на ' + email;
+    if (devCode) {
+      // Локальный режим — показываем код прямо на странице
+      document.getElementById('verifyBannerText').innerHTML = 'Код: <strong>' + devCode + '</strong>';
+      verifyInput.value = devCode;
+    } else {
+      document.getElementById('verifyBannerText').textContent = 'Код отправлен на ' + email;
+      verifyInput.value = '';
+    }
     verifyBanner.style.display = '';
-    verifyInput.value = '';
     verifyInput.focus();
+  }
+
+  function verifyDone(ok, isAdmin) {
+    verifyBanner.style.display = 'none';
+    err.style.display = 'none';
+    window.location.href = isAdmin ? 'admin.html' : 'index.html';
   }
 
   // Verify code from banner
@@ -205,6 +233,22 @@
     var code = verifyInput.value.trim();
     if (!code) return;
     verifyBtn.disabled = true; verifyBtn.textContent = '...';
+
+    function verified(res) {
+      if (res && res.error) {
+        err.textContent = res.error;
+        err.style.display = 'block';
+        verifyBtn.disabled = false; verifyBtn.textContent = 'Подтвердить';
+        return;
+      }
+      verifyDone(true, !!(res && res.is_admin));
+    }
+
+    // Локальный режим (file://)
+    if (window.Auth && Auth.isLocalMode()) {
+      verified(Auth.localVerify(_loginEmail, code));
+      return;
+    }
 
     fetch('/api/auth/verify', {
       method: 'POST',
@@ -239,6 +283,14 @@
       .catch(function() { window.location.href = 'index.html'; });
     })
     .catch(function() {
+      // Fallback на локальный режим при недоступном сервере
+      if (window.Auth && Auth.localVerify) {
+        var res = Auth.localVerify(_loginEmail, code);
+        if (res && !res.error) {
+          verifyDone(true, !!(res.user && res.user.is_admin));
+          return;
+        }
+      }
       err.textContent = 'Ошибка сервера';
       err.style.display = 'block';
       verifyBtn.disabled = false; verifyBtn.textContent = 'Подтвердить';
@@ -249,6 +301,24 @@
   resendLink.addEventListener('click', function(e) {
     e.preventDefault();
     if (!_loginEmail) return;
+
+    function resendLocal() {
+      if (!(window.Auth && Auth.getLocalUsers && Auth.getLocalUsers()[_loginEmail])) return false;
+      var newCode = Auth._genCode();
+      var codes = Auth.getLocalCodes();
+      codes[_loginEmail] = newCode;
+      Auth.setLocalCodes(codes);
+      document.getElementById('verifyBannerText').innerHTML = 'Код: <strong>' + newCode + '</strong>';
+      verifyInput.value = newCode;
+      return true;
+    }
+
+    // Локальный режим (file://)
+    if (window.Auth && Auth.isLocalMode()) {
+      resendLocal();
+      return;
+    }
+
     fetch('/api/auth/resend-verification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -265,7 +335,10 @@
         }
       }
     })
-    .catch(function() {});
+    .catch(function() {
+      // Fallback на локальный режим при недоступном сервере
+      resendLocal();
+    });
   });
 
   // Currency switcher

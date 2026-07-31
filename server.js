@@ -11,6 +11,9 @@ require('dotenv').config();
 // ===== Database =====
 const { db, getPool, initDb } = require('./lib/db');
 
+// ===== Администраторы =====
+const ADMIN_EMAILS = ['justxirrez@inbox.ru', 'mikoto_11@list.ru'];
+
 // ===== App =====
 const app = express();
 
@@ -103,7 +106,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const code = generateCode(6);
-    const isAdmin = email === 'justxirrez@inbox.ru' ? 1 : 0;
+    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase()) ? 1 : 0;
 
     await db.run(
       'INSERT INTO users (name, nickname, email, password, is_admin, verification_code, email_verified) VALUES ($1, $2, $3, $4, $5, $6, 0)',

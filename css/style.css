@@ -485,13 +485,14 @@ input, button, select, textarea { font-family: inherit; }
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #06231a;
+  color: #fff;
   background: linear-gradient(135deg, var(--green-400), var(--green-600));
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 .btn:hover {
   background: linear-gradient(135deg, var(--green-300), var(--green-500));
-  color: #06231a !important;
+  color: #fff !important;
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
   transform: translateY(-1px);
 }
@@ -1351,7 +1352,7 @@ input, button, select, textarea { font-family: inherit; }
 .auth__switch {
   text-align: center;
   font-size: 14px;
-  color: var(--gray-500);
+  color: var(--gray-300);
   margin-top: 24px;
 }
 .auth__switch a {
@@ -1385,7 +1386,7 @@ input, button, select, textarea { font-family: inherit; }
   border-color: var(--green-600);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
-.form-input::placeholder { color: var(--gray-500); }
+.form-input::placeholder { color: var(--gray-400); }
 .form-error {
   display: none;
   font-size: 14px;
@@ -3211,6 +3212,7 @@ body::before {
   justify-content: center;
   align-items: center;
   z-index: 1;
+  perspective: 1400px;
   animation: fadeUp 0.6s ease 0.1s both;
 }
 .hero__visual::before {
@@ -3234,11 +3236,14 @@ body::before {
     0 22px 60px -12px rgba(16, 185, 129, 0.18),
     0 0 0 1px rgba(0, 0, 0, 0.5),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transform-style: preserve-3d;
   animation: phoneFloat 6s ease-in-out infinite;
 }
 @keyframes phoneFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  0%, 100% { transform: translateY(0) rotateY(0deg); }
+  25% { transform: translateY(-12px) rotateY(10deg); }
+  50% { transform: translateY(-10px) rotateY(0deg); }
+  75% { transform: translateY(-6px) rotateY(-10deg); }
 }
 .phone__screen {
   position: relative;
@@ -3435,6 +3440,7 @@ body::before {
   background: rgba(255, 255, 255, 0.85);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
+[data-theme="light"] .auth__switch { color: var(--gray-400); }
 .form-input {
   background: var(--glass-bg);
   border-color: var(--glass-brd);
