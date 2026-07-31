@@ -3216,7 +3216,10 @@ body::before {
 }
 .hero__accent {
   font-size: clamp(44px, 5.6vw, 64px);
-  background: linear-gradient(120deg, var(--green-300), var(--green-500) 55%, var(--green-600));
+  /* background-image (не shorthand) — иначе background-clip:text сбрасывается на border-box и текст невидим */
+  background-image: linear-gradient(120deg, var(--green-300), var(--green-500) 55%, var(--green-600));
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 .hero__desc {
   margin: 0 0 34px;
@@ -3561,7 +3564,7 @@ body::before {
 /* --- Светлая тема: контраст «Моментально» и кнопок на светлом фоне --- */
 /* Мятные стопы (#6ee7b7 / #34d399) сливались со светлым фоном — заменены на изумрудные */
 [data-theme="light"] .hero__accent {
-  background: linear-gradient(120deg, #059669, #047857 55%, #022c22);
+  background-image: linear-gradient(120deg, #059669, #047857 55%, #022c22);
 }
 [data-theme="light"] .btn:not(.btn--outline):not(.btn--admin) {
   background: linear-gradient(135deg, #059669, #022c22);
