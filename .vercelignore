@@ -1,0 +1,7 @@
+# Секреты никогда не попадают в загрузку на Vercel
+.env
+.env.*
+!.env.example
+
+node_modules
+.git

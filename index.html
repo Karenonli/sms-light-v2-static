@@ -122,23 +122,66 @@
 <section class="hero">
   <div class="container">
     <div class="hero__content">
-      <h1 class="hero__title">
-        Виртуальные номера
-        <span class="hero__accent">Моментально</span>
-      </h1>
-      <p class="hero__desc">
-        Купить виртуальные номера для регистрации в Telegram, WhatsApp и 200+ сервисах. Быстро, анонимно, безопасно.
-      </p>
+      <div class="hero__left">
+        <div class="hero__badge">
+          <span class="hero__badge-dot"></span>
+          Номера для 200+ сервисов
+        </div>
+        <h1 class="hero__title">
+          Виртуальные номера
+          <span class="hero__accent">Моментально</span>
+        </h1>
+        <p class="hero__desc">
+          Купить виртуальные номера для регистрации в Telegram, WhatsApp и 200+ сервисах. Быстро, анонимно, безопасно.
+        </p>
 
-      <!-- Search -->
-      <div class="search-box">
-        <svg class="search-box__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input type="text" id="serviceSearch" class="search-box__input"
-          placeholder="Поиск сервиса... Telegram, WhatsApp, Instagram..."
-          autocomplete="off">
-        <div class="search-box__dropdown" id="heroSearchDropdown"></div>
+        <!-- Search -->
+        <div class="search-box">
+          <svg class="search-box__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="serviceSearch" class="search-box__input"
+            placeholder="Поиск сервиса... Telegram, WhatsApp, Instagram..."
+            autocomplete="off">
+          <div class="search-box__dropdown" id="heroSearchDropdown"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="hero__stats">
+          <div class="hero__stat">
+            <div class="hero__stat-num"><em>200+</em> сервисов</div>
+            <div class="hero__stat-label">Telegram, WhatsApp, Instagram…</div>
+          </div>
+          <div class="hero__stat">
+            <div class="hero__stat-num"><em>30+</em> стран</div>
+            <div class="hero__stat-label">Номера в наличии</div>
+          </div>
+          <div class="hero__stat">
+            <div class="hero__stat-num"><em>10</em> секунд</div>
+            <div class="hero__stat-label">До получения кода</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="hero__visual">
+        <div class="phone">
+          <div class="phone__screen">
+            <div class="phone__notch"></div>
+            <div class="phone__appbar">
+              <span class="phone__appbar-name">SMS<span>Light</span></span>
+              <span class="phone__appbar-ok">● Онлайн</span>
+            </div>
+            <div class="phone__chat">
+              <div class="phone__msg phone__msg--in">Номер готов: +7 999 123-45-67</div>
+              <div class="phone__msg phone__msg--in">Ожидаем SMS с кодом…</div>
+              <div class="phone__msg phone__msg--code">4 3 2 1</div>
+              <div class="phone__msg phone__msg--out">Готово! Код получен ✅</div>
+              <div class="phone__typing"><i></i><i></i><i></i></div>
+            </div>
+            <div class="phone__status">Оплата подтверждена · баланс активен</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

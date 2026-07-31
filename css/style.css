@@ -1,5 +1,5 @@
 /* ============================================
-   SMS Light — Premium Redesign (Green Edition)
+   SMS Light — Premium v2 Redesign (Green Edition)
    ============================================ */
 
 /* --- Reset & Base --- */
@@ -75,6 +75,15 @@
   --card-border: #222424;
   --overlay-bg: rgba(0,0,0,0.6);
   --text-muted: #636565;
+
+  /* Premium v2 tokens */
+  --glow-green: rgba(16, 185, 129, 0.14);
+  --glow-green-strong: rgba(16, 185, 129, 0.28);
+  --glass-bg: rgba(13, 15, 15, 0.72);
+  --glass-bg-solid: rgba(13, 15, 15, 0.95);
+  --glass-brd: rgba(255, 255, 255, 0.07);
+  --grid-line: rgba(16, 185, 129, 0.045);
+  --ring-green: rgba(16, 185, 129, 0.18);
 }
 
 /* Light theme */
@@ -121,6 +130,14 @@
   --card-border: #d5d7d7;
   --overlay-bg: rgba(0,0,0,0.15);
   --text-muted: #9fa1a1;
+
+  --glow-green: rgba(5, 150, 105, 0.09);
+  --glow-green-strong: rgba(5, 150, 105, 0.2);
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg-solid: rgba(255, 255, 255, 0.96);
+  --glass-brd: rgba(0, 0, 0, 0.08);
+  --grid-line: rgba(5, 150, 105, 0.05);
+  --ring-green: rgba(5, 150, 105, 0.16);
 }
 
 html { scroll-behavior: smooth; }
@@ -3033,4 +3050,496 @@ input, button, select, textarea { font-family: inherit; }
 }
 [data-theme="light"] .toast__text {
   color: var(--gray-600);
+}
+
+/* ============================================
+   Premium v2 — радикальный визуальный редизайн
+   (перекрывает базовые стили выше; зелёный цвет не меняется)
+   ============================================ */
+
+/* --- Фон: мягкие свечения + сетка --- */
+body {
+  background:
+    radial-gradient(1100px 520px at 50% -8%, var(--glow-green) 0%, transparent 62%),
+    radial-gradient(700px 420px at 92% 4%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 520px at 50% -8%, rgba(5, 150, 105, 0.08) 0%, transparent 62%),
+    radial-gradient(700px 420px at 92% 4%, rgba(5, 150, 105, 0.05) 0%, transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 46px 46px;
+  pointer-events: none;
+}
+.admin-body::before { display: none; }
+
+/* --- Шапка: стекло --- */
+.header {
+  background: var(--glass-bg);
+  border-bottom-color: var(--glass-brd);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+[data-theme="light"] .header {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* --- Кнопки: свечение + блик на hover --- */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+.btn:not(.btn--outline):not(.btn--admin) {
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.22);
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  transition: left 0.55s ease;
+}
+.btn:hover::after { left: 130%; }
+.btn--outline::after,
+.btn--admin::after { display: none; }
+
+/* --- Hero: две колонки --- */
+.hero {
+  padding: 72px 0 84px;
+  overflow: hidden;          /* fallback для старых браузеров */
+  overflow-x: clip;          /* горизонталь клипаем */
+  overflow-y: visible;       /* вертикаль НЕ клипаем → dropdown поиска не обрезается */
+}
+.hero::after {
+  width: 900px;
+  height: 720px;
+  top: -32%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.07) 0%, transparent 65%);
+}
+.hero__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+  align-items: center;
+  gap: 56px;
+  max-width: 1080px;
+  text-align: left;
+}
+.hero__left {
+  min-width: 0;
+  animation: fadeUp 0.5s ease both;
+}
+.hero__badge {
+  margin-bottom: 22px;
+  padding: 6px 16px;
+  background: var(--glass-bg);
+  border-color: var(--ring-green);
+  backdrop-filter: blur(8px);
+}
+.hero__badge-dot { animation: badgePulse 2.2s ease-in-out infinite; }
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+.hero__title {
+  font-size: clamp(38px, 5vw, 56px);
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+.hero__accent {
+  font-size: clamp(44px, 5.6vw, 64px);
+  background: linear-gradient(120deg, var(--green-300), var(--green-500) 55%, var(--green-600));
+}
+.hero__desc {
+  margin: 0 0 34px;
+  max-width: 470px;
+  font-size: 16.5px;
+}
+.hero__content .search-box { margin: 0; }
+.hero__content .search-box__input {
+  padding: 16px 18px 16px 48px;
+  font-size: 15.5px;
+  border-radius: 16px;
+}
+
+/* --- Статистика в hero --- */
+.hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 34px;
+  margin-top: 38px;
+  padding-top: 26px;
+  border-top: 1px solid var(--glass-brd);
+}
+.hero__stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.4px;
+  margin-bottom: 2px;
+}
+.hero__stat-num em {
+  font-style: normal;
+  color: var(--green-text);
+}
+.hero__stat-label {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+/* --- Визуал: телефон --- */
+.hero__visual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  animation: fadeUp 0.6s ease 0.1s both;
+}
+.hero__visual::before {
+  content: '';
+  position: absolute;
+  inset: -30px -50px;
+  background: radial-gradient(closest-side, rgba(16, 185, 129, 0.2), transparent 70%);
+  filter: blur(30px);
+  z-index: -1;
+}
+.phone {
+  position: relative;
+  width: 300px;
+  height: 580px;
+  background: linear-gradient(180deg, #161a18, #0c0f0d);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 46px;
+  padding: 12px;
+  box-shadow:
+    0 40px 90px -20px rgba(0, 0, 0, 0.65),
+    0 22px 60px -12px rgba(16, 185, 129, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: phoneFloat 6s ease-in-out infinite;
+}
+@keyframes phoneFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.phone__screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #0b0f0c 0%, #090c0a 100%);
+  border-radius: 36px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.phone__notch {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 24px;
+  background: #0a0c0b;
+  border-radius: 0 0 16px 16px;
+  z-index: 2;
+}
+.phone__appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 20px 10px;
+  color: #eaf0ec;
+}
+.phone__appbar-name { font-size: 13px; font-weight: 800; letter-spacing: -0.2px; }
+.phone__appbar-name span { color: var(--green-400); }
+.phone__appbar-ok {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green-400);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.phone__chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 14px;
+  background: radial-gradient(240px 150px at 50% 0%, rgba(16, 185, 129, 0.09), transparent 70%);
+}
+.phone__msg {
+  max-width: 82%;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 14px;
+  animation: fadeUp 0.5s ease both;
+}
+.phone__msg--in {
+  align-self: flex-start;
+  background: #151a17;
+  color: #c6d0ca;
+  border-bottom-left-radius: 5px;
+  animation-delay: 0.2s;
+}
+.phone__msg--out {
+  align-self: flex-end;
+  background: linear-gradient(135deg, var(--green-500), var(--green-600));
+  color: #fff;
+  border-bottom-right-radius: 5px;
+  animation-delay: 0.55s;
+}
+.phone__msg--code {
+  align-self: center;
+  max-width: 100%;
+  text-align: center;
+  letter-spacing: 6px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--green-300);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px dashed rgba(16, 185, 129, 0.35);
+  animation-delay: 0.38s;
+}
+.phone__typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  align-self: flex-start;
+  padding: 11px 13px;
+  background: #151a17;
+  border-radius: 14px;
+  border-bottom-left-radius: 5px;
+  animation: fadeUp 0.5s ease 0.7s both;
+}
+.phone__typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6b7a71;
+  animation: typingDot 1.2s ease-in-out infinite;
+}
+.phone__typing i:nth-child(2) { animation-delay: 0.15s; }
+.phone__typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.phone__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  font-size: 10.5px;
+  color: #7e8d84;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.phone__status::before {
+  content: '●';
+  color: var(--green-400);
+  font-size: 8px;
+}
+
+/* --- Поиск: стекло --- */
+.search-box__input {
+  background: var(--glass-bg-solid);
+  border-color: var(--glass-brd);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+}
+.search-box__input:focus {
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 4px var(--ring-green), 0 8px 30px rgba(0, 0, 0, 0.32);
+}
+.search-box__dropdown {
+  border-radius: 16px;
+  background: var(--glass-bg-solid);
+  border-color: var(--glass-brd);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.search-box__dropdown > div { padding: 11px 16px; }
+[data-theme="light"] .search-box__input {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .search-box__input:focus {
+  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12), 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .search-box__dropdown {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+}
+
+/* --- Карточки: округление + подъём --- */
+.category__header { border-radius: 12px; }
+.category__header:hover { border-color: rgba(16, 185, 129, 0.35); }
+.category__count { background: var(--gray-800); }
+.service-card {
+  border-radius: 12px;
+  border-color: var(--glass-brd);
+}
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(16, 185, 129, 0.25);
+}
+.feature-card {
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+}
+.feature-card__icon { border-radius: 12px; }
+.testimonial-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.testimonial-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
+}
+.country-card { border-radius: 12px; }
+.order-summary { border-radius: 18px; }
+
+/* --- Авторизация: стекло --- */
+.auth__card {
+  background: var(--glass-bg-solid);
+  border-color: var(--glass-brd);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+[data-theme="light"] .auth__card {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.form-input {
+  background: var(--glass-bg);
+  border-color: var(--glass-brd);
+}
+[data-theme="light"] .form-input {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--gray-300);
+}
+.checkout__card {
+  border-radius: 18px;
+  background: var(--glass-bg-solid);
+  border-color: var(--glass-brd);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Футер: градиентная линия --- */
+.footer {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.03), transparent 45%), var(--bg-2);
+  border-top-color: transparent;
+}
+.footer::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent);
+}
+
+/* --- Светлая тема: телефон, чипы --- */
+[data-theme="light"] .phone {
+  background: linear-gradient(180deg, #ffffff, #e9edeb);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 30px 70px -20px rgba(0, 0, 0, 0.25),
+    0 20px 50px -12px rgba(5, 150, 105, 0.14),
+    0 0 0 1px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+[data-theme="light"] .phone__screen {
+  background: linear-gradient(180deg, #f7faf8, #eff3f0);
+}
+[data-theme="light"] .phone__notch { background: #eef1ef; }
+[data-theme="light"] .phone__msg--in,
+[data-theme="light"] .phone__typing {
+  background: #e6ebe8;
+  color: #3a4540;
+}
+[data-theme="light"] .phone__typing i { background: #98a59d; }
+[data-theme="light"] .phone__msg--code {
+  color: var(--green-700);
+  border-color: rgba(5, 150, 105, 0.4);
+  background: rgba(5, 150, 105, 0.06);
+}
+[data-theme="light"] .phone__status {
+  color: #6b7a71;
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .hero__visual::before {
+  background: radial-gradient(closest-side, rgba(5, 150, 105, 0.14), transparent 70%);
+}
+[data-theme="light"] .footer {
+  background: linear-gradient(180deg, rgba(5, 150, 105, 0.04), transparent 45%), var(--bg-2);
+}
+
+/* --- Адаптивность hero --- */
+@media (max-width: 1024px) {
+  .nav {
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .hero {
+    padding: 60px 0 68px;
+  }
+  .hero__content {
+    grid-template-columns: 1fr;
+    gap: 64px;
+    text-align: center;
+    max-width: 620px;
+  }
+  .hero__desc { margin-left: auto; margin-right: auto; }
+  .hero__content .search-box { margin: 0 auto; }
+  .hero__stats { justify-content: center; }
+  .hero__visual { order: 2; }
+}
+
+@media (max-width: 768px) {
+  .hero { padding: 44px 0 52px; }
+  .hero__title { font-size: clamp(30px, 8vw, 38px); letter-spacing: -0.5px; }
+  .hero__accent { font-size: clamp(34px, 9vw, 44px); }
+  .hero__desc { font-size: 15px; }
+  .hero__stats { gap: 22px; margin-top: 28px; padding-top: 22px; }
+  .hero__stat-num { font-size: 17px; }
+  .phone { width: 260px; height: 520px; border-radius: 40px; }
+  .phone__screen { border-radius: 31px; }
+  .phone__notch { width: 96px; }
+}
+
+@media (max-width: 480px) {
+  .hero__content { gap: 44px; }
+  .phone { width: 232px; height: 470px; border-radius: 34px; padding: 10px; }
+  .phone__screen { border-radius: 26px; }
+  .phone__msg--code { font-size: 14px; letter-spacing: 4px; }
+  .hero__stats { gap: 18px; }
+  .hero__stat-label { font-size: 11px; }
 }
