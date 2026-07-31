@@ -3287,13 +3287,14 @@ body::before {
     0 0 0 1px rgba(0, 0, 0, 0.5),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transform-style: preserve-3d;
-  animation: phoneFloat 6s ease-in-out infinite;
+  animation: phoneFloat 5.2s ease-in-out infinite;
 }
 @keyframes phoneFloat {
-  0%, 100% { transform: translateY(0) rotateY(0deg); }
-  25% { transform: translateY(-12px) rotateY(10deg); }
-  50% { transform: translateY(-10px) rotateY(0deg); }
-  75% { transform: translateY(-6px) rotateY(-10deg); }
+  0%, 100% { transform: translateY(0) rotateY(0deg) rotateX(0deg); }
+  20% { transform: translateY(-16px) rotateY(18deg) rotateX(4deg); }
+  40% { transform: translateY(-10px) rotateY(-4deg) rotateX(-2deg); }
+  65% { transform: translateY(-14px) rotateY(-18deg) rotateX(4deg); }
+  85% { transform: translateY(-5px) rotateY(4deg) rotateX(-2deg); }
 }
 .phone__screen {
   position: relative;
@@ -3555,6 +3556,18 @@ body::before {
 }
 [data-theme="light"] .footer {
   background: linear-gradient(180deg, rgba(5, 150, 105, 0.04), transparent 45%), var(--bg-2);
+}
+
+/* --- Светлая тема: контраст «Моментально» и кнопок на светлом фоне --- */
+/* Мятные стопы (#6ee7b7 / #34d399) сливались со светлым фоном — заменены на изумрудные */
+[data-theme="light"] .hero__accent {
+  background: linear-gradient(120deg, #059669, #047857 55%, #022c22);
+}
+[data-theme="light"] .btn:not(.btn--outline):not(.btn--admin) {
+  background: linear-gradient(135deg, #059669, #022c22);
+}
+[data-theme="light"] .btn:not(.btn--outline):not(.btn--admin):hover {
+  background: linear-gradient(135deg, #047857, #022c22);
 }
 
 /* --- Адаптивность hero --- */
