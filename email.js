@@ -26,22 +26,23 @@ function getTransportConfig() {
 
 // ===== Создание транспорта =====
 let _transporter = null;
-let _smtpFailed = false;
 
-async function getTransporter(forceRecreate) {
-  if (_transporter && !forceRecreate) return _transporter;
+async function getTransporter() {
+  if (_transporter) return _transporter;
 
   const config = getTransportConfig();
-  if (config && !_smtpFailed) {
+  if (config) {
     _transporter = nodemailer.createTransport(config);
     return _transporter;
   }
 
-  if (_smtpFailed) {
-    console.log('→ SMTP ранее не работал, используем Ethereal');
+  // SMTP не настроен — Ethereal (тестовый SMTP для локальной разработки).
+  // На Vercel без SMTP отправлять письма нечем, поэтому сразу ошибка.
+  if (process.env.VERCEL) {
+    throw new Error('SMTP не настроен на Vercel. Укажите SMTP_* переменные.');
   }
 
-  // Dev-режим или fallback: создаём Ethereal аккаунт
+  // Локальная разработка: создаём Ethereal аккаунт
   try {
     const testAccount = await nodemailer.createTestAccount();
     console.log('→ Email: Ethereal аккаунт создан');
@@ -59,25 +60,16 @@ async function getTransporter(forceRecreate) {
     });
   } catch (err) {
     console.error('✖ Email: не удалось создать Ethereal аккаунт:', err.message);
-    // Последний шанс — попробовать создать транспорт из конфига как есть
-    if (config) {
-      _transporter = nodemailer.createTransport(config);
-    } else {
-      throw new Error('Нет ни SMTP, ни Ethereal. Email недоступен.');
-    }
+    throw new Error('Нет ни SMTP, ни Ethereal. Email недоступен.');
   }
 
   return _transporter;
 }
 
-function markSmtpFailed() {
-  _smtpFailed = true;
-  _transporter = null;
-}
-
-// Флаг: был ли использован fallback (Ethereum / вывод в консоль)
+// Флаг: используется ли Ethereal (тестовый режим) вместо реального SMTP.
+// Верно только когда SMTP вообще не настроен — то есть локальная разработка.
 function isUsingFallback() {
-  return _smtpFailed || !getTransportConfig();
+  return !getTransportConfig();
 }
 
 // ===== SVG-иконки (base64-free, inline) =====
@@ -328,19 +320,16 @@ async function verifyConnection() {
       console.error('  Если вы используете Mail.ru/inbox.ru — нужен пароль приложения (app password),');
       console.error('  а не обычный пароль от почты. Создайте его в настройках Mail.ru → Безопасность →');
       console.error('  Пароли для внешних приложений.');
-      console.error('  → Будет использован Ethereal (тестовый режим)');
     } else {
       console.error('✖ SMTP: Ethereal недоступен:', err.message);
     }
-    _transporter = null; // сброс, чтобы при следующем вызове создался Ethereal
-    markSmtpFailed();
+    _transporter = null; // сброс, чтобы следующая попытка создала свежее соединение
     return false;
   }
 }
 
 // ===== Отправка =====
 async function sendEmail(to, subject, html) {
-  const alreadyFallingBack = _smtpFailed;
   try {
     const transporter = await getTransporter();
 
@@ -365,31 +354,12 @@ async function sendEmail(to, subject, html) {
   } catch (err) {
     console.error('>> Email error:', err.message);
 
-    // Ошибка получателя (550 и т.п. — «all recipients were rejected») — это
-    // ошибка конкретного письма, а не SMTP-соединения. Из-за неё транспорт
-    // помечать мёртвым нельзя: один неверный email не должен переводить
-    // все следующие письма в тестовый режим.
-    const recipientRejected = /all recipients were rejected|can't send mail/i.test(err.message);
+    // Сбрасываем транспорт, чтобы следующая отправка создала свежее
+    // SMTP-соединение. Это важно для serverless (Vercel): один сбой не должен
+    // «навсегда» переводить тёплый инстанс на Ethereal — каждое следующее
+    // письмо снова попробует реальный SMTP.
+    _transporter = null;
 
-    // If we were using real SMTP (not already fallback), try Ethereal once
-    if (getTransportConfig() && !alreadyFallingBack && !recipientRejected) {
-      markSmtpFailed();
-      console.log('>> Switching to Ethereal fallback...');
-      try {
-        const transporter = await getTransporter(true);
-        const fallbackInfo = await transporter.sendMail({
-          from: '"SMS Light" <noreply@sms-light.ru>',
-          to, subject, html,
-        });
-        console.log(`>> Email (Ethereal) sent to ${to}: ${nodemailer.getTestMessageUrl(fallbackInfo)}`);
-        return fallbackInfo;
-      } catch (e2) {
-        console.error('>> Ethereal also failed:', e2.message);
-        throw e2;
-      }
-    }
-
-    // All transports failed — сообщаем об ошибке
     console.log(`>> [SMTP FAIL] Email to ${to} failed: ${err.message}`);
     throw err;
   }
@@ -407,7 +377,6 @@ module.exports = {
   sendEmail,
   generateCode,
   verifyConnection,
-  markSmtpFailed,
   isUsingFallback,
   templates: {
     verification: verificationEmail,

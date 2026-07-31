@@ -438,16 +438,19 @@
       setupCodeInputs();
 
       if (data.email_failed) {
-        document.getElementById('verifyEmailText').innerHTML = emailFailedText || '⚠️ Письмо не отправлено.<br>Но вы можете использовать код ниже:';
-        // Show code directly in the inputs for convenience
         var code = data.dev_code || '';
         if (code) {
+          // Демо/локальный режим: показываем код прямо в полях для удобства
+          document.getElementById('verifyEmailText').innerHTML = emailFailedText || '⚠️ Письмо не отправлено.<br>Но вы можете использовать код ниже:';
           document.querySelectorAll('#codeInputs .code-input').forEach(function(inp, idx) {
             inp.value = code[idx] || '';
             if (inp.value) inp.classList.add('filled');
           });
           document.getElementById('verifyBtn').disabled = false;
           document.getElementById('verifyBtn').style.opacity = '1';
+        } else {
+          // Продакшен: код не раскрываем на сайте
+          document.getElementById('verifyEmailText').textContent = 'Письмо не отправлено. Проверьте правильность email и нажмите «Отправить снова».';
         }
       } else {
         document.getElementById('verifyEmailText').textContent = 'Код отправлен на ' + email;
@@ -593,7 +596,11 @@
     link.style.opacity = '0.5';
 
     function showNewCode(code) {
-      document.getElementById('verifyEmailText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + (code || '') + '</strong>.';
+      if (code) {
+        document.getElementById('verifyEmailText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + code + '</strong>.';
+      } else {
+        document.getElementById('verifyEmailText').textContent = 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.';
+      }
       document.querySelectorAll('#codeInputs .code-input').forEach(function(inp) { inp.value = ''; inp.classList.remove('filled'); });
       document.querySelector('#codeInputs .code-input').focus();
     }

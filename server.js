@@ -14,6 +14,12 @@ const { db, getPool, initDb } = require('./lib/db');
 // ===== Администраторы =====
 const ADMIN_EMAILS = ['justxirrez@inbox.ru', 'mikoto_11@list.ru'];
 
+// ===== Dev-режим =====
+// На Vercel код подтверждения никогда не отдаётся в ответах — только реальная
+// отправка письма на почту. dev_code/email_failed возвращаются лишь при локальном
+// запуске (node server.js), чтобы можно было продолжить без рабочего SMTP.
+const IS_DEV = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
+
 // ===== App =====
 const app = express();
 
@@ -119,17 +125,28 @@ app.post('/api/auth/register', async (req, res) => {
       res.json({
         ok: true,
         message: 'Код подтверждения отправлен на ваш email',
-        ...(isUsingFallback() ? { dev_code: code } : {}),
+        ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
     } catch (emailErr) {
       console.error('Failed to send verification email:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Код для ${email}: ${code} (письмо не отправлено — SMTP недоступен)`);
-      res.json({
-        ok: true,
-        email_failed: true,
-        message: '⚠️ Не удалось отправить письмо с кодом. Но вы можете использовать код ниже для подтверждения.',
-        dev_code: code,
-      });
+      if (IS_DEV) {
+        // Локальная разработка: показываем код в интерфейсе, чтобы можно было
+        // продолжить регистрацию без рабочего SMTP.
+        res.json({
+          ok: true,
+          email_failed: true,
+          message: '⚠️ Не удалось отправить письмо с кодом. Но вы можете использовать код ниже для подтверждения.',
+          dev_code: code,
+        });
+      } else {
+        // Продакшен: код в ответе не раскрываем. Пользователь увидит нейтральное
+        // сообщение и сможет повторить отправку через «Отправить снова».
+        res.json({
+          ok: true,
+          message: 'Код подтверждения запрошен. Если письмо не пришло в течение пары минут, проверьте правильность email и нажмите «Отправить снова».',
+        });
+      }
     }
   } catch (err) {
     console.error('Register error:', err);
@@ -233,17 +250,24 @@ app.post('/api/auth/resend-verification', async (req, res) => {
       console.log(`→ Новый код подтверждения для ${email}: ${code}`);
       res.json({
         ok: true,
-        ...(isUsingFallback() ? { dev_code: code } : {}),
+        ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
     } catch (emailErr) {
       console.error('Resend email failed:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Новый код для ${email}: ${code} (письмо не отправлено)`);
-      res.json({
-        ok: true,
-        email_failed: true,
-        message: '⚠️ Не удалось отправить письмо. Используйте код: ' + code,
-        dev_code: code,
-      });
+      if (IS_DEV) {
+        res.json({
+          ok: true,
+          email_failed: true,
+          message: '⚠️ Не удалось отправить письмо. Используйте код: ' + code,
+          dev_code: code,
+        });
+      } else {
+        res.json({
+          ok: true,
+          message: 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.',
+        });
+      }
     }
   } catch (err) {
     console.error('Resend error:', err);
@@ -273,17 +297,24 @@ app.post('/api/auth/forgot', async (req, res) => {
       res.json({
         ok: true,
         message: 'Код восстановления отправлен на ваш email',
-        ...(isUsingFallback() ? { dev_code: code } : {}),
+        ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
     } catch (emailErr) {
       console.error('Forgot email failed:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Код восстановления для ${email}: ${code} (письмо не отправлено)`);
-      res.json({
-        ok: true,
-        email_failed: true,
-        message: '⚠️ Не удалось отправить письмо. Код восстановления: ' + code,
-        dev_code: code,
-      });
+      if (IS_DEV) {
+        res.json({
+          ok: true,
+          email_failed: true,
+          message: '⚠️ Не удалось отправить письмо. Код восстановления: ' + code,
+          dev_code: code,
+        });
+      } else {
+        res.json({
+          ok: true,
+          message: 'Код восстановления запрошен. Если письмо не пришло в течение пары минут, проверьте правильность email и попробуйте ещё раз.',
+        });
+      }
     }
   } catch (err) {
     console.error('Forgot error:', err);
