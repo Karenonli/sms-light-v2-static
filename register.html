@@ -438,20 +438,8 @@
       setupCodeInputs();
 
       if (data.email_failed) {
-        var code = data.dev_code || '';
-        if (code) {
-          // Демо/локальный режим: показываем код прямо в полях для удобства
-          document.getElementById('verifyEmailText').innerHTML = emailFailedText || '⚠️ Письмо не отправлено.<br>Но вы можете использовать код ниже:';
-          document.querySelectorAll('#codeInputs .code-input').forEach(function(inp, idx) {
-            inp.value = code[idx] || '';
-            if (inp.value) inp.classList.add('filled');
-          });
-          document.getElementById('verifyBtn').disabled = false;
-          document.getElementById('verifyBtn').style.opacity = '1';
-        } else {
-          // Продакшен: код не раскрываем на сайте
-          document.getElementById('verifyEmailText').textContent = 'Письмо не отправлено. Проверьте правильность email и нажмите «Отправить снова».';
-        }
+        // Код на сайте не показываем ни в каком режиме — он приходит только на почту.
+        document.getElementById('verifyEmailText').textContent = emailFailedText || 'Письмо не отправлено. Проверьте правильность email и нажмите «Отправить снова».';
       } else {
         document.getElementById('verifyEmailText').textContent = 'Код отправлен на ' + email;
       }
@@ -461,7 +449,7 @@
     if (window.Auth && Auth.isLocalMode()) {
       var res = Auth.localRegister(name, email, pw);
       res.email_failed = true;
-      showVerify(res, 'Демо-режим (файл открыт без сервера).<br>Ваш код подтверждения:');
+      showVerify(res, 'Демо-режим (файл открыт без сервера): письмо не отправляется, код не приходит на почту. Зарегистрируйтесь на реальном сайте — sms-light-v2-static.vercel.app');
       return;
     }
 
@@ -473,17 +461,9 @@
     .then(function(r) { return r.json(); })
     .then(showVerify)
     .catch(function() {
-      // Сервер недоступен — fallback на локальный демо-режим
-      if (window.Auth && Auth.localRegister) {
-        var res = Auth.localRegister(name, email, pw);
-        if (res && !res.error) {
-          res.email_failed = true;
-          showVerify(res, 'Демо-режим (сервер недоступен).<br>Ваш код подтверждения:');
-          return;
-        }
-      }
+      // Сервер недоступен: не подменяем реальный сайт локальным демо-режимом
       btn.classList.remove('btn--loading');
-      err.textContent = 'Ошибка соединения с сервером';
+      err.textContent = 'Ошибка соединения с сервером. Проверьте подключение и попробуйте ещё раз.';
       err.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Зарегистрироваться';
     });
@@ -571,8 +551,8 @@
     .then(function(r) { return r.json(); })
     .then(verifyOk)
     .catch(function() {
-      // Fallback на локальный режим при недоступном сервере
-      if (window.Auth && Auth.localVerify) {
+      // Сервер недоступен: локальная проверка кода применима только в file://-режиме
+      if (window.Auth && Auth.isLocalMode() && Auth.localVerify) {
         var res = Auth.localVerify(_regEmail, code);
         if (res && !res.error) {
           verifyOk(res);
@@ -595,12 +575,9 @@
     link.style.pointerEvents = 'none';
     link.style.opacity = '0.5';
 
-    function showNewCode(code) {
-      if (code) {
-        document.getElementById('verifyEmailText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + code + '</strong>.';
-      } else {
-        document.getElementById('verifyEmailText').textContent = 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.';
-      }
+    function showNewCode() {
+      // Код на сайте не показываем — он приходит только на почту.
+      document.getElementById('verifyEmailText').textContent = 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.';
       document.querySelectorAll('#codeInputs .code-input').forEach(function(inp) { inp.value = ''; inp.classList.remove('filled'); });
       document.querySelector('#codeInputs .code-input').focus();
     }
@@ -611,13 +588,13 @@
       var codes = Auth.getLocalCodes();
       codes[_regEmail] = newCode;
       Auth.setLocalCodes(codes);
-      showNewCode(newCode);
       return true;
     }
 
     // Локальный режим (file://)
     if (window.Auth && Auth.isLocalMode()) {
       resendLocal();
+      document.getElementById('verifyEmailText').textContent = 'Демо-режим (файл открыт без сервера): письмо не отправляется, код не приходит на почту. Откройте реальный сайт — sms-light-v2-static.vercel.app';
       link.style.pointerEvents = '';
       link.style.opacity = '';
       return;
@@ -631,12 +608,11 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.email_failed) {
-        showNewCode(data.dev_code);
+        showNewCode();
       }
     })
     .catch(function() {
-      // Fallback на локальный режим при недоступном сервере
-      resendLocal();
+      showNewCode();
     })
     .finally(function() {
       link.style.pointerEvents = '';

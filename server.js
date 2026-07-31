@@ -130,9 +130,11 @@ app.post('/api/auth/register', async (req, res) => {
     } catch (emailErr) {
       console.error('Failed to send verification email:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Код для ${email}: ${code} (письмо не отправлено — SMTP недоступен)`);
-      if (IS_DEV) {
-        // Локальная разработка: показываем код в интерфейсе, чтобы можно было
-        // продолжить регистрацию без рабочего SMTP.
+      // Код в ответе отдаём ТОЛЬКО когда SMTP не настроен вовсе (Ethereal, локальная
+      // разработка). Если SMTP настроен, но не работает — нейтральное сообщение без кода.
+      if (IS_DEV && isUsingFallback()) {
+        // Локальная разработка без SMTP: показываем код в интерфейсе, чтобы можно
+        // было продолжить регистрацию на Ethereal.
         res.json({
           ok: true,
           email_failed: true,
@@ -255,7 +257,7 @@ app.post('/api/auth/resend-verification', async (req, res) => {
     } catch (emailErr) {
       console.error('Resend email failed:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Новый код для ${email}: ${code} (письмо не отправлено)`);
-      if (IS_DEV) {
+      if (IS_DEV && isUsingFallback()) {
         res.json({
           ok: true,
           email_failed: true,
@@ -302,7 +304,7 @@ app.post('/api/auth/forgot', async (req, res) => {
     } catch (emailErr) {
       console.error('Forgot email failed:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Код восстановления для ${email}: ${code} (письмо не отправлено)`);
-      if (IS_DEV) {
+      if (IS_DEV && isUsingFallback()) {
         res.json({
           ok: true,
           email_failed: true,

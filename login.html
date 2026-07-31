@@ -149,7 +149,7 @@
       if (data.error) {
         if (data.needs_verification) {
           btn.disabled = false; btn.textContent = 'Войти';
-          showVerifyBanner(data.email, data.dev_code);
+          showVerifyBanner(data.email);
           return;
         }
         err.textContent = data.error;
@@ -194,30 +194,28 @@
     .then(function(r) { return r.json(); })
     .then(loginOk)
     .catch(function() {
-      // Сервер недоступен — fallback на локальный демо-режим
-      if (window.Auth && Auth.localLogin) {
+      // Сервер недоступен: локальный вход применим только в file://-режиме
+      if (window.Auth && Auth.isLocalMode() && Auth.localLogin) {
         var res = Auth.localLogin(email, password);
         if (res && (res.ok || res.error)) {
           loginOk(res);
           return;
         }
       }
-      err.textContent = 'Ошибка соединения с сервером';
+      err.textContent = 'Ошибка соединения с сервером. Проверьте подключение и попробуйте ещё раз.';
       err.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Войти';
     });
   });
 
-  function showVerifyBanner(email, devCode) {
+  function showVerifyBanner(email) {
     _loginEmail = email;
-    if (devCode) {
-      // Локальный режим — показываем код прямо на странице
-      document.getElementById('verifyBannerText').innerHTML = 'Код: <strong>' + devCode + '</strong>';
-      verifyInput.value = devCode;
-    } else {
-      document.getElementById('verifyBannerText').textContent = 'Код отправлен на ' + email;
-      verifyInput.value = '';
-    }
+    // Код на сайте не показываем — он приходит только на почту.
+    var isDemo = window.Auth && Auth.isLocalMode();
+    document.getElementById('verifyBannerText').textContent = isDemo
+      ? 'Демо-режим (файл открыт без сервера): код на почту не отправляется. Войдите на реальном сайте — sms-light-v2-static.vercel.app'
+      : 'Код отправлен на ' + email;
+    verifyInput.value = '';
     verifyBanner.style.display = '';
     verifyInput.focus();
   }
@@ -283,8 +281,8 @@
       .catch(function() { window.location.href = 'index.html'; });
     })
     .catch(function() {
-      // Fallback на локальный режим при недоступном сервере
-      if (window.Auth && Auth.localVerify) {
+      // Сервер недоступен: локальная проверка применима только в file://-режиме
+      if (window.Auth && Auth.isLocalMode() && Auth.localVerify) {
         var res = Auth.localVerify(_loginEmail, code);
         if (res && !res.error) {
           verifyDone(true, !!(res.user && res.user.is_admin));
@@ -308,14 +306,13 @@
       var codes = Auth.getLocalCodes();
       codes[_loginEmail] = newCode;
       Auth.setLocalCodes(codes);
-      document.getElementById('verifyBannerText').innerHTML = 'Код: <strong>' + newCode + '</strong>';
-      verifyInput.value = newCode;
       return true;
     }
 
     // Локальный режим (file://)
     if (window.Auth && Auth.isLocalMode()) {
       resendLocal();
+      document.getElementById('verifyBannerText').textContent = 'Демо-режим (файл открыт без сервера): код на почту не отправляется. Войдите на реальном сайте — sms-light-v2-static.vercel.app';
       return;
     }
 
@@ -327,17 +324,16 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok) {
-        if (data.email_failed && data.dev_code) {
-          document.getElementById('verifyBannerText').innerHTML = '⚠️ Письмо не отправлено. Код: <strong>' + data.dev_code + '</strong>';
-          document.getElementById('verifyCodeInput').value = data.dev_code;
+        if (data.email_failed) {
+          // Код на сайте не показываем — он приходит только на почту.
+          document.getElementById('verifyBannerText').textContent = 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.';
         } else {
           document.getElementById('verifyBannerText').textContent = 'Новый код отправлен на ' + _loginEmail;
         }
       }
     })
     .catch(function() {
-      // Fallback на локальный режим при недоступном сервере
-      resendLocal();
+      document.getElementById('verifyBannerText').textContent = 'Не удалось отправить письмо. Проверьте подключение и попробуйте ещё раз.';
     });
   });
 
