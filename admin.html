@@ -580,6 +580,475 @@
       .purchase-actions input[type="text"] { width: 100%; }
       .reply-form { flex-direction: column; }
     }
+
+    /* ==========================================================
+       Premium-редизайн админки: стекло и свечения (единый стиль
+       с css/style.css, зелёная палитра не меняется)
+       ========================================================== */
+    :root {
+      --green-400: #34d399; --green-500: #10b981; --green-600: #059669; --green-700: #047857;
+      --bg: #080a0a;
+      --surface: #0e1010; --surface-2: #141616; --surface-3: #1a1c1c;
+      --gray-900: #111212; --gray-850: #161818; --gray-800: #202222; --gray-750: #282a2a;
+      --gray-700: #353737; --gray-600: #4a4c4c; --gray-500: #636565; --gray-400: #818383;
+      --gray-300: #9fa1a1; --gray-200: #bdbebe; --gray-100: #d8d9d9; --white: #eef0f0;
+      --green-subtle: rgba(16, 185, 129, 0.08); --green-text: var(--green-400);
+      --red: #ef4444; --yellow: #eab308; --blue: #60a5fa;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+      --card-border: #222424;
+      --glow-green: rgba(16, 185, 129, 0.14);
+      --glass-bg: rgba(13, 15, 15, 0.72);
+      --glass-bg-solid: rgba(13, 15, 15, 0.96);
+      --glass-brd: rgba(255, 255, 255, 0.07);
+      --grid-line: rgba(16, 185, 129, 0.045);
+      --ring-green: rgba(16, 185, 129, 0.18);
+    }
+    [data-theme="light"] {
+      --bg: #eef0f0;
+      --surface: #ffffff; --surface-2: #f5f7f7; --surface-3: #edefef;
+      --gray-900: #ffffff; --gray-850: #eef0f0; --gray-800: #dee0e0; --gray-750: #d0d2d2;
+      --gray-700: #bdbebe; --gray-600: #9fa1a1; --gray-500: #818383; --gray-400: #636565;
+      --gray-300: #4a4c4c; --gray-200: #353737; --gray-100: #202222; --white: #0c0e0e;
+      --green-subtle: rgba(5, 150, 105, 0.07); --green-text: var(--green-700);
+      --red: #dc2626; --yellow: #ca8a04; --blue: #2563eb;
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --card-border: #d5d7d7;
+      --glow-green: rgba(5, 150, 105, 0.09);
+      --glass-bg: rgba(255, 255, 255, 0.78);
+      --glass-bg-solid: rgba(255, 255, 255, 0.97);
+      --glass-brd: rgba(0, 0, 0, 0.08);
+      --grid-line: rgba(5, 150, 105, 0.05);
+      --ring-green: rgba(5, 150, 105, 0.16);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gray-700); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--green-600); }
+
+    /* Фон: мягкие свечения + сетка */
+    body {
+      color: var(--gray-200);
+      background:
+        radial-gradient(1100px 520px at 50% -8%, var(--glow-green) 0%, transparent 62%),
+        radial-gradient(700px 420px at 92% 4%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+    [data-theme="light"] body {
+      background:
+        radial-gradient(1100px 520px at 50% -8%, rgba(5, 150, 105, 0.08) 0%, transparent 62%),
+        radial-gradient(700px 420px at 92% 4%, rgba(5, 150, 105, 0.05) 0%, transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 46px 46px;
+    }
+    .container { max-width: 1200px; }
+
+    /* Шапка: стекло */
+    .admin-header {
+      background: var(--glass-bg);
+      border-bottom-color: var(--glass-brd);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+    [data-theme="light"] .admin-header { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06); }
+    .admin-header__logo { color: var(--gray-100); }
+    .admin-header__logo svg { color: var(--green-500); }
+    .admin-header__logo .logo-accent { color: var(--green-text); }
+    [data-theme="light"] .admin-header__logo { color: #222; }
+    [data-theme="light"] .admin-header__logo .logo-accent { color: var(--green-700); }
+    .admin-badge {
+      background: linear-gradient(135deg, var(--green-400), var(--green-600));
+      color: #fff;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Кнопки: градиент + свечение + блик */
+    .btn {
+      position: relative;
+      overflow: hidden;
+      font-weight: 600;
+      border-radius: 10px;
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -70%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+      transform: skewX(-20deg);
+      pointer-events: none;
+      transition: left 0.55s ease;
+    }
+    .btn:hover::after { left: 130%; }
+    .btn--primary, .btn--success {
+      background: linear-gradient(135deg, var(--green-400), var(--green-600));
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.22);
+    }
+    .btn--primary:hover, .btn--success:hover { background: linear-gradient(135deg, var(--green-400), var(--green-600)); filter: brightness(1.06); }
+    .btn--danger {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2);
+    }
+    .btn--danger:hover { background: linear-gradient(135deg, #f87171, #ef4444); filter: brightness(1.05); }
+    .btn--outline {
+      background: transparent;
+      border: 1px solid var(--gray-700);
+      color: var(--gray-300);
+    }
+    .btn--outline::after { display: none; }
+    .btn--outline:hover { border-color: var(--green-500); color: var(--gray-100); }
+    [data-theme="light"] .btn--outline { border-color: var(--gray-600); color: var(--gray-400); }
+    [data-theme="light"] .btn--outline:hover { border-color: var(--green-600); color: var(--gray-900); }
+    .btn--icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--gray-750);
+      color: var(--gray-400);
+      overflow: hidden;
+    }
+    .btn--icon:hover { border-color: var(--red); color: var(--red); }
+    [data-theme="light"] .btn--icon { border-color: var(--gray-700); color: var(--gray-500); }
+    [data-theme="light"] .btn--icon:hover { border-color: var(--red); color: var(--red); }
+    .btn--icon svg, .btn svg { flex-shrink: 0; }
+
+    /* Страница */
+    .page { padding: 36px 0; }
+    .page__title { font-size: 26px; font-weight: 700; color: var(--gray-100); }
+    .page__subtitle { color: var(--gray-500); font-size: 14px; margin-bottom: 28px; }
+    [data-theme="light"] .page__title { color: #222; }
+    [data-theme="light"] .page__subtitle { color: var(--gray-400); }
+
+    /* Карточки статистики: стекло + зелёная линия */
+    .stats { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 28px; }
+    .stat-card {
+      position: relative;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--ring-green); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green-400), transparent);
+      opacity: 0.75;
+    }
+    [data-theme="light"] .stat-card { background: var(--glass-bg); }
+    .stat-card__label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .stat-card__value { font-size: 30px; font-weight: 800; color: var(--gray-100); }
+    [data-theme="light"] .stat-card__value { color: #222; }
+
+    /* Таблицы: стекло, мягкие строки */
+    .table-wrap {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    [data-theme="light"] .table-wrap { background: var(--glass-bg); }
+    th {
+      background: var(--surface-2);
+      color: var(--gray-400);
+      font-size: 11px;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    td { color: var(--gray-300); border-bottom: 1px solid var(--card-border); }
+    tbody tr { transition: background 0.15s ease; }
+    tbody tr:hover { background: var(--green-subtle); }
+    [data-theme="light"] th { background: var(--surface-2); color: var(--gray-500); }
+    [data-theme="light"] th, [data-theme="light"] td { border-color: var(--card-border); }
+    [data-theme="light"] td { color: var(--gray-300); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .badge--admin {
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--green-text);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge--user {
+      background: var(--surface-3);
+      color: var(--gray-500);
+      border: 1px solid var(--card-border);
+    }
+    [data-theme="light"] .badge--user { background: var(--surface-3); color: var(--gray-400); }
+    .user-name { font-weight: 500; color: var(--gray-100); }
+    [data-theme="light"] .user-name { color: #222; }
+    .user-avatar {
+      background: linear-gradient(135deg, var(--green-400), var(--green-600));
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+    .user-email { color: var(--gray-500); }
+    [data-theme="light"] .user-email { color: var(--gray-400); }
+
+    /* Пустые состояния + блок входа */
+    .empty-state { padding: 56px 20px; color: var(--gray-500); }
+    .empty-state__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green-600);
+      opacity: 0.5;
+      margin-bottom: 12px;
+    }
+    .empty-state__text { font-size: 15px; color: var(--gray-400); }
+    [data-theme="light"] .empty-state__text { color: var(--gray-400); }
+    .login-prompt { padding: 100px 20px; }
+    .login-prompt__icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green-text);
+      background: var(--green-subtle);
+      border: 1px solid var(--ring-green);
+      border-radius: 18px;
+    }
+    .login-prompt__title { font-size: 20px; font-weight: 700; color: var(--gray-100); }
+    .login-prompt__text { color: var(--gray-500); }
+    [data-theme="light"] .login-prompt__title { color: #222; }
+    [data-theme="light"] .login-prompt__text { color: var(--gray-400); }
+
+    /* Вкладки: стеклянные пилюли */
+    .admin-tabs {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 12px;
+      padding: 4px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    [data-theme="light"] .admin-tabs { background: var(--glass-bg); }
+    .admin-tab { color: var(--gray-400); font-weight: 600; }
+    .admin-tab:hover { color: var(--gray-100); }
+    .admin-tab.active {
+      background: linear-gradient(135deg, var(--green-500), var(--green-600));
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    [data-theme="light"] .admin-tab { color: var(--gray-400); }
+    [data-theme="light"] .admin-tab:hover { color: var(--gray-900); }
+    [data-theme="light"] .admin-tab.active { background: linear-gradient(135deg, var(--green-600), var(--green-700)); color: #fff; }
+
+    /* Инпуты */
+    .reply-form textarea,
+    .purchase-actions input[type="text"],
+    .modal__body .form-input,
+    #testEmailTo {
+      background: var(--surface);
+      border: 1px solid var(--gray-750);
+      color: var(--gray-200);
+    }
+    .reply-form textarea:focus,
+    .purchase-actions input[type="text"]:focus,
+    .modal__body .form-input:focus,
+    #testEmailTo:focus { border-color: var(--green-500); }
+    [data-theme="light"] .reply-form textarea,
+    [data-theme="light"] .purchase-actions input[type="text"],
+    [data-theme="light"] .modal__body .form-input,
+    [data-theme="light"] #testEmailTo {
+      background: var(--surface);
+      border-color: var(--gray-700);
+      color: var(--gray-300);
+    }
+    .purchase-actions select {
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--gray-750);
+      color: var(--gray-200);
+      font-size: 13px;
+      font-family: var(--font);
+      outline: none;
+    }
+    .purchase-actions select:focus { border-color: var(--green-500); }
+    [data-theme="light"] .purchase-actions select { background: var(--surface); border-color: var(--gray-700); color: var(--gray-300); }
+
+    /* Чат: стекло */
+    .chat-layout { gap: 16px; }
+    .chat-list {
+      width: 300px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    [data-theme="light"] .chat-list { background: var(--glass-bg); }
+    .chat-list__item { border-bottom: 1px solid var(--card-border); }
+    .chat-list__item.active { border-left: 3px solid var(--green-500); }
+    .chat-list__avatar {
+      background: linear-gradient(135deg, var(--green-400), var(--green-600));
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+    .chat-list__name { color: var(--gray-100); }
+    [data-theme="light"] .chat-list__name { color: #222; }
+    .chat-list__preview { color: var(--gray-500); }
+    [data-theme="light"] .chat-list__preview { color: var(--gray-400); }
+    .chat-list__empty { color: var(--gray-500); }
+    .chat-list__unread {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-window {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    [data-theme="light"] .chat-window { background: var(--glass-bg); }
+    .chat-window__header { background: var(--surface-2); border-bottom: 1px solid var(--card-border); color: var(--gray-100); }
+    [data-theme="light"] .chat-window__header { background: var(--surface-2); color: #222; }
+    .chat-window__empty { color: var(--gray-500); }
+    .chat-msg--admin {
+      background: linear-gradient(135deg, var(--green-500), var(--green-600));
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+    }
+    .chat-msg--user { background: var(--surface-3); color: var(--gray-200); }
+    [data-theme="light"] .chat-msg--user { background: var(--surface-3); color: var(--gray-300); }
+    .chat-window__input { border-top: 1px solid var(--card-border); background: var(--surface-2); }
+    [data-theme="light"] .chat-window__input { background: var(--surface-2); }
+    .chat-window__input input {
+      background: var(--surface);
+      border: 1px solid var(--gray-750);
+      color: var(--gray-200);
+    }
+    .chat-window__input input:focus { border-color: var(--green-500); }
+    [data-theme="light"] .chat-window__input input { background: var(--surface); border-color: var(--gray-700); color: var(--gray-300); }
+
+    /* Карточки покупок в чате */
+    .chat-purchases { background: var(--surface-2); border-bottom: 1px solid var(--card-border); }
+    [data-theme="light"] .chat-purchases { background: var(--surface-2); }
+    .chat-purchase-card { background: var(--glass-bg); border: 1px solid var(--card-border); }
+    .chat-purchase-card:hover { border-color: var(--green-600); }
+    .chat-purchase__service { color: var(--gray-100); }
+    [data-theme="light"] .chat-purchase__service { color: #222; }
+    .chat-purchase__price { color: var(--green-text); }
+    .chat-purchase__meta { color: var(--gray-400); }
+    .chat-purchase__meta svg { vertical-align: -2px; color: var(--gray-500); }
+    .chat-purchase__date { color: var(--gray-500); }
+
+    /* Модальное окно */
+    .modal-overlay { background: rgba(0, 0, 0, 0.6); }
+    [data-theme="light"] .modal-overlay { background: rgba(0, 0, 0, 0.4); }
+    .modal {
+      background: var(--glass-bg-solid);
+      border: 1px solid var(--glass-brd);
+      border-radius: 16px;
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: var(--shadow-lg);
+    }
+    .modal__header { border-bottom: 1px solid var(--card-border); }
+    .modal__header h3 { color: var(--gray-100); }
+    [data-theme="light"] .modal__header h3 { color: #222; }
+    .modal__close { color: var(--gray-400); }
+    .modal__close:hover { background: var(--gray-800); color: var(--gray-100); }
+    .modal__body .form-group label { color: var(--gray-400); }
+    .modal__footer { border-top: 1px solid var(--card-border); }
+
+    /* SMTP карточки */
+    .smtp-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    [data-theme="light"] .smtp-card { background: var(--glass-bg); }
+    .smtp-card__title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--gray-100);
+    }
+    .smtp-card__title svg { color: var(--green-text); }
+    [data-theme="light"] .smtp-card__title { color: #222; }
+    .smtp-card__desc { color: var(--gray-500); }
+    [data-theme="light"] .smtp-card__desc { color: var(--gray-400); }
+
+    /* Тост */
+    .toast {
+      background: var(--glass-bg-solid);
+      border: 1px solid var(--ring-green);
+      border-radius: 14px;
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: var(--shadow-lg);
+    }
+    .toast__icon { display: flex; align-items: center; color: var(--green-text); }
+    .toast__title { color: var(--gray-100); }
+    .toast__text { color: var(--gray-400); }
+    [data-theme="light"] .toast__title { color: #222; }
+    [data-theme="light"] .toast__text { color: var(--gray-400); }
+
+    .spinner { border-color: var(--gray-800); border-top-color: var(--green-500); }
+    [data-theme="light"] .spinner { border-color: var(--gray-700); border-top-color: var(--green-600); }
+    .smtp-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--gray-700);
+      border-top-color: var(--green-500);
+      border-radius: 50%;
+      display: inline-block;
+      vertical-align: -2px;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    .smtp-status svg { flex-shrink: 0; }
+    [data-theme="light"] .smtp-spinner { border-color: var(--gray-600); border-top-color: var(--green-600); }
   </style>
 </head>
 <body>
@@ -588,7 +1057,7 @@
     <div class="container admin-header__inner">
       <a href="index.html" class="admin-header__logo">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,0 15,10 24,12 15,14 12,24 9,14 0,12 9,10"/></svg>
-        SMS<span>Light</span>
+        SMS<span class="logo-accent">Light</span>
         <span class="admin-badge">Админ</span>
       </a>
       <div class="admin-header__actions">
@@ -608,7 +1077,7 @@
 
       <!-- Login prompt (not authed) -->
       <div id="loginPrompt" class="login-prompt" style="display:none">
-        <span class="login-prompt__icon">🔒</span>
+        <span class="login-prompt__icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
         <h1 class="login-prompt__title">Доступ только для администратора</h1>
         <p class="login-prompt__text">Войдите под учётной записью администратора</p>
         <a href="login.html" class="btn btn--primary">Войти</a>
@@ -743,10 +1212,10 @@
 
           <!-- SMTP Status -->
           <div class="smtp-card">
-            <div class="smtp-card__title">📡 Статус SMTP</div>
+            <div class="smtp-card__title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Статус SMTP</div>
             <div class="smtp-card__desc">Проверка подключения к почтовому серверу</div>
             <div class="smtp-status" id="smtpStatus">
-              <span id="smtpStatusIcon">⏳</span>
+              <span id="smtpStatusIcon"></span>
               <span id="smtpStatusText">Проверка...</span>
             </div>
             <button class="btn btn--outline btn--sm" onclick="checkSmtpStatus()">Проверить снова</button>
@@ -754,7 +1223,7 @@
 
           <!-- Test Email -->
           <div class="smtp-card">
-            <div class="smtp-card__title">✉️ Тестовая отправка</div>
+            <div class="smtp-card__title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> Тестовая отправка</div>
             <div class="smtp-card__desc">Отправьте тестовое письмо с кодом подтверждения</div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
               <input type="email" id="testEmailTo" class="form-input" placeholder="email для теста" style="flex:1;background:#0f0f0f;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#e0e0e0;font-size:14px;outline:none;font-family:inherit;">
@@ -765,13 +1234,13 @@
 
           <!-- App Password Info -->
           <div class="smtp-card">
-            <div class="smtp-card__title">🔐 Настройка SMTP</div>
+            <div class="smtp-card__title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Настройка SMTP</div>
             <div class="smtp-card__desc">Для отправки писем через Mail.ru / inbox.ru требуется пароль приложения</div>
             <div style="font-size:13px;color:#9ca3af;line-height:1.7;">
               <p>1. Перейдите в <a href="https://e.mail.ru/settings/security" target="_blank" style="color:#10b981;">настройки Mail.ru</a> → Безопасность → Пароли для внешних приложений</p>
               <p>2. Создайте «Пароль для внешнего приложения»</p>
               <p>3. Скопируйте его в <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">SMTP_PASS</code> в файле <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">.env</code></p>
-              <p style="margin-top:8px;color:#6b7280;">⚠️ Обычный пароль от почты НЕ подходит — Mail.ru блокирует SMTP-вход без пароля приложения.</p>
+              <p style="margin-top:8px;color:#6b7280;display:flex;gap:6px;align-items:flex-start;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;color:#eab308;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>Обычный пароль от почты НЕ подходит — Mail.ru блокирует SMTP-вход без пароля приложения.</span></p>
               <div style="margin-top:12px;background:#0f0f0f;border:1px solid #222;border-radius:8px;padding:12px 16px;font-size:12px;font-family:monospace;color:#888;">
 SMTP_HOST=smtp.mail.ru<br>
 SMTP_PORT=465<br>
@@ -863,7 +1332,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     function renderUsers(users) {
       if (!users || users.length === 0) {
         document.getElementById('usersBody').innerHTML =
-          '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon">📭</span><span class="empty-state__text">Нет зарегистрированных пользователей</span></div></td></tr>';
+          '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span><span class="empty-state__text">Нет зарегистрированных пользователей</span></div></td></tr>';
         document.getElementById('statTotal').textContent = '0';
         document.getElementById('statAdmins').textContent = '0';
         document.getElementById('statToday').textContent = '0';
@@ -932,7 +1401,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     function renderTickets(tickets) {
       var body = document.getElementById('ticketsBody');
       if (!tickets || tickets.length === 0) {
-        body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon">📭</span><span class="empty-state__text">Нет заявок в поддержку</span></div></td></tr>';
+        body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><span class="empty-state__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span><span class="empty-state__text">Нет заявок в поддержку</span></div></td></tr>';
         document.getElementById('ticketBadge').style.display = 'none';
         return;
       }
@@ -998,7 +1467,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     function renderPurchases(purchases) {
       var body = document.getElementById('purchasesBody');
       if (!purchases || purchases.length === 0) {
-        body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><span class="empty-state__icon">📦</span><span class="empty-state__text">Нет покупок</span></div></td></tr>';
+        body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><span class="empty-state__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><span class="empty-state__text">Нет покупок</span></div></td></tr>';
         return;
       }
 
@@ -1054,10 +1523,10 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
           '</td>' +
           '<td style="color:#6b7280;font-size:13px">' + date + '</td>' +
           '<td>' +
-            '<button class="btn btn--success btn--sm" onclick="updatePurchase(' + p.id + ')" title="Сохранить">💾</button>' +
+            '<button class="btn btn--success btn--sm" onclick="updatePurchase(' + p.id + ')" title="Сохранить"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg></button>' +
           '</td>' +
           '<td>' + (user && !user.is_admin ?
-            '<button class="btn btn--sm" style="background:#059669;color:#fff" onclick="openUserChat(' + p.userId + ')" title="Написать пользователю">✉️</button>'
+            '<button class="btn btn--success btn--sm" onclick="openUserChat(' + p.userId + ')" title="Написать пользователю"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></button>'
             : '') +
           '</td>' +
           '</tr>';
@@ -1104,8 +1573,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
         var userPurchasesList = Data.getPurchases(c.otherUserId);
         if (userPurchasesList.length > 0) {
           var latestP = userPurchasesList[0];
-          var statusIcon = latestP.status === 'pending' ? '⏳' : latestP.status === 'completed' ? '✅' : '❌';
-          preview = statusIcon + ' ' + latestP.serviceName + ' · ' + (typeof Data !== 'undefined' ? Data.getCountryFlag(latestP.country) : '🌍') + ' ' + latestP.country;
+          preview = latestP.serviceName + ' · ' + (typeof Data !== 'undefined' ? Data.getCountryFlag(latestP.country) : '') + ' ' + latestP.country;
         } else if (!preview) {
           preview = 'Нет сообщений';
         }
@@ -1159,8 +1627,8 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
               '<span class="chat-purchase__price">' + p.price + ' ' + p.currency + '</span>' +
             '</div>' +
             '<div class="chat-purchase__meta">' +
-              '<span>' + (typeof Data !== 'undefined' ? Data.getCountryFlag(p.country) : '🌍') + ' ' + esc(p.country) + '</span>' +
-              '<span>📱 ' + (p.phoneNumber ? esc(p.phoneNumber) : '—') + '</span>' +
+              '<span>' + (typeof Data !== 'undefined' ? Data.getCountryFlag(p.country) : '') + ' ' + esc(p.country) + '</span>' +
+              '<span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ' + (p.phoneNumber ? esc(p.phoneNumber) : '—') + '</span>' +
               '<span class="status-badge ' + p.status + '">' + pStatus + '</span>' +
             '</div>' +
             '<div class="chat-purchase__date">' + pDate + '</div>' +
@@ -1293,7 +1761,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       if (users.length > s.users) {
         var newCount = users.length - s.users;
         var lastUser = users[users.length - 1];
-        showToast('👤', 'Новый пользователь', esc(lastUser.name) + ' (' + esc(lastUser.email) + ')', newCount);
+        showToast('<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>', 'Новый пользователь', esc(lastUser.name) + ' (' + esc(lastUser.email) + ')', newCount);
         s.users = users.length;
       }
 
@@ -1302,7 +1770,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
         var newPurchases = purchases.length - s.purchases;
         if (purchases.length > 0) {
           var lastP = purchases[0];
-          showToast('🛒', 'Новая покупка', lastP.serviceName + ' (' + (typeof Data !== 'undefined' ? Data.getCountryFlag(lastP.country) : '') + ' ' + lastP.country + ') — ' + lastP.price + ' ' + lastP.currency, newPurchases);
+          showToast('<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>', 'Новая покупка', lastP.serviceName + ' (' + (typeof Data !== 'undefined' ? Data.getCountryFlag(lastP.country) : '') + ' ' + lastP.country + ') — ' + lastP.price + ' ' + lastP.currency, newPurchases);
         }
         s.purchases = purchases.length;
       }
@@ -1364,7 +1832,9 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
 	      var statusEl = document.getElementById('smtpStatus');
 	      var iconEl = document.getElementById('smtpStatusIcon');
 	      var textEl = document.getElementById('smtpStatusText');
-	      iconEl.textContent = '⏳';
+	      var icOk = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+	      var icErr = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+	      iconEl.innerHTML = '<span class="smtp-spinner"></span>';
 	      textEl.textContent = 'Проверка...';
 	      statusEl.className = 'smtp-status';
 
@@ -1372,17 +1842,17 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
 	        .then(function(r) { return r.json(); })
 	        .then(function(data) {
 	          if (data.ok) {
-	            iconEl.textContent = '✅';
+	            iconEl.innerHTML = icOk;
 	            textEl.textContent = 'SMTP работает';
 	            statusEl.classList.add('smtp-status--ok');
 	          } else {
-	            iconEl.textContent = '❌';
+	            iconEl.innerHTML = icErr;
 	            textEl.textContent = 'SMTP недоступен. Сервер использует тестовый режим (Ethereal).';
 	            statusEl.classList.add('smtp-status--err');
 	          }
 	        })
 	        .catch(function() {
-	          iconEl.textContent = '❌';
+	          iconEl.innerHTML = icErr;
 	          textEl.textContent = 'Ошибка проверки';
 	          statusEl.classList.add('smtp-status--err');
 	        });
@@ -1409,16 +1879,16 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
 	      .then(function(r) { return r.json(); })
 	      .then(function(data) {
 	        if (data.error) {
-	          result.textContent = '❌ ' + data.error;
+	          result.textContent = '✕ ' + data.error;
 	          result.className = 'smtp-test-result smtp-test-result--err';
 	        } else {
-	          result.textContent = '✅ ' + data.message;
+	          result.textContent = '✓ ' + data.message;
 	          result.className = 'smtp-test-result smtp-test-result--ok';
 	        }
 	        result.style.display = 'block';
 	      })
 	      .catch(function() {
-	        result.textContent = '❌ Ошибка соединения';
+	        result.textContent = '✕ Ошибка соединения';
 	        result.className = 'smtp-test-result smtp-test-result--err';
 	        result.style.display = 'block';
 	      })

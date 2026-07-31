@@ -217,24 +217,39 @@
 
       if (session) {
         var safeName = (session.nickname || session.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        var safeEmail = (session.email || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        var initial = (safeName || '?').charAt(0).toUpperCase();
 
         // Desktop dropdown in header actions
         var menuEl = document.getElementById('userMenu');
         if (menuEl) {
           var ddHtml = '<div class="user-dropdown" id="userDropdown">' +
             '<button class="user-dropdown__trigger" onclick="Auth.toggleDropdown(event)">' +
-              '<span class="user-dropdown__avatar">👤</span>' +
+              '<span class="user-dropdown__avatar">' + initial + '</span>' +
               '<span class="user-dropdown__name">' + safeName + '</span>' +
-              '<span class="user-dropdown__arrow">▼</span>' +
+              '<svg class="user-dropdown__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
             '</button>' +
             '<div class="user-dropdown__menu" id="userDropdownMenu">' +
-              '<div class="user-dropdown__header">' + safeName + '</div>';
+              '<div class="user-dropdown__header">' +
+                '<span class="user-dropdown__header-avatar">' + initial + '</span>' +
+                '<span class="user-dropdown__header-meta">' +
+                  '<span class="user-dropdown__header-name">' + safeName + '</span>' +
+                  '<span class="user-dropdown__header-email">' + safeEmail + '</span>' +
+                '</span>' +
+              '</div>' +
+              '<div class="user-dropdown__divider"></div>';
           if (session.is_admin) {
-            ddHtml += '<a href="admin.html" class="user-dropdown__item">⚙ Админка</a>';
+            ddHtml += '<a href="admin.html" class="user-dropdown__item">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' +
+                '<span>Админка</span></a>';
           }
-          ddHtml += '<div class="user-dropdown__item" onclick="Profile.toggleDrawer()">📋 Личный кабинет</div>' +
+          ddHtml += '<div class="user-dropdown__item" onclick="Profile.toggleDrawer()">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>' +
+                '<span>Личный кабинет</span></div>' +
               '<div class="user-dropdown__divider"></div>' +
-              '<div class="user-dropdown__item user-dropdown__item--danger" onclick="Auth.logout()">🚪 Выйти</div>' +
+              '<div class="user-dropdown__item user-dropdown__item--danger" onclick="Auth.logout()">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>' +
+                '<span>Выйти</span></div>' +
             '</div>' +
           '</div>';
           menuEl.innerHTML = ddHtml;
