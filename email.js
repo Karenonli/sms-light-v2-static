@@ -350,8 +350,14 @@ async function sendEmail(to, subject, html) {
   } catch (err) {
     console.error('>> Email error:', err.message);
 
+    // Ошибка получателя (550 и т.п. — «all recipients were rejected») — это
+    // ошибка конкретного письма, а не SMTP-соединения. Из-за неё транспорт
+    // помечать мёртвым нельзя: один неверный email не должен переводить
+    // все следующие письма в тестовый режим.
+    const recipientRejected = /all recipients were rejected|can't send mail/i.test(err.message);
+
     // If we were using real SMTP (not already fallback), try Ethereal once
-    if (getTransportConfig() && !alreadyFallingBack) {
+    if (getTransportConfig() && !alreadyFallingBack && !recipientRejected) {
       markSmtpFailed();
       console.log('>> Switching to Ethereal fallback...');
       try {

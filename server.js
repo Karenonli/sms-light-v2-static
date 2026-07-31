@@ -14,6 +14,10 @@ const { db, getPool, initDb } = require('./lib/db');
 // ===== App =====
 const app = express();
 
+// На Vercel TLS завершается на Edge, внутри функции запрос приходит по HTTP.
+// Без этого Express считает соединение небезопасным и не отправляет Secure-куки сессии.
+app.set('trust proxy', 1);
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 

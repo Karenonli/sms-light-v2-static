@@ -120,8 +120,8 @@
           menuEl.innerHTML = ddHtml;
         }
 
-        // Mobile nav
-        var isMobile = window.innerWidth <= 768;
+        // Mobile nav (совпадает с брейкпоинтом бургера в style.css)
+        var isMobile = window.innerWidth <= 1024;
         var html = '';
         if (isMobile) {
           if (session.is_admin) {
