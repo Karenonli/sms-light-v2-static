@@ -286,7 +286,8 @@ window.Profile = (function() {
     Data.markConversationRead(session.id, adminId);
     if (typeof ChatServer !== 'undefined') ChatServer.markRead(session.id, adminId);
 
-    var html = '<div class="profile-section__header"><h3>Чат с администратором</h3></div>';
+    var html = '<div class="profile-section__header"><h3>Чат с администратором</h3>' +
+      '<span class="profile-online">● В сети</span></div>';
 
     html += '<div class="chat-messages" id="chatMessages">';
     if (messages.length === 0) {
@@ -344,13 +345,28 @@ window.Profile = (function() {
     if (!user || !admin) return;
 
     Data.sendMessage(userId, user.name, adminId, admin.name, text);
+    maybeAutoReply(userId, user.name, adminId, admin.name);
     renderChat();
+  }
+
+  // Автоответчик: если администратор ещё ни разу не отвечал — отправляем автоматический ответ
+  function maybeAutoReply(userId, userName, adminId, adminName) {
+    if (!userId || !adminId || typeof Data === 'undefined') return;
+    var conv = Data.getConversation(userId, adminId);
+    for (var i = 0; i < conv.length; i++) {
+      if (conv[i].senderId === adminId) return; // админ уже отвечал — не спамим
+    }
+    Data.sendMessage(
+      adminId, adminName,
+      userId, userName,
+      'Здравствуйте! Ваш заказ будет выполнен через 30 сек - 5 минут. Ожидайте'
+    );
   }
 
   function getAdminId() {
     var users = Auth.getUsers();
     for (var i = 0; i < users.length; i++) {
-      if (users[i].is_admin === 1) return users[i].id;
+      if (users[i].is_admin === 1 || users[i].is_admin === true) return users[i].id;
     }
     return null;
   }
@@ -554,20 +570,37 @@ window.Profile = (function() {
       return;
     }
 
+    // Открываем чат с администратором (с загрузкой списка пользователей при необходимости)
     var adminId = getAdminId();
-    if (!adminId) {
-      showChatOverlay('Нет администратора', null, null, true);
-      return;
+    if (adminId) {
+      var users = Auth.getUsers();
+      var admin = null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].id === adminId) { admin = users[i]; break; }
+      }
+      if (admin) {
+        showChatOverlay(admin.name, session.id, adminId, false);
+        return;
+      }
     }
-
-    var users = Auth.getUsers();
-    var admin = null;
-    for (var i = 0; i < users.length; i++) {
-      if (users[i].id === adminId) { admin = users[i]; break; }
-    }
-    if (!admin) return;
-
-    showChatOverlay(admin.name, session.id, adminId, false);
+    // Список пользователей ещё не загружен — подгружаем и повторяем
+    Auth.syncUsers().then(function() {
+      var adminId2 = getAdminId();
+      if (!adminId2) {
+        showChatOverlay('Нет администратора', null, null, true);
+        return;
+      }
+      var users2 = Auth.getUsers();
+      var admin2 = null;
+      for (var i = 0; i < users2.length; i++) {
+        if (users2[i].id === adminId2) { admin2 = users2[i]; break; }
+      }
+      if (!admin2) {
+        showChatOverlay('Нет администратора', null, null, true);
+        return;
+      }
+      showChatOverlay(admin2.name, session.id, adminId2, false);
+    });
   }
 
   // ========== Full-Screen Chat Overlay ==========
@@ -596,7 +629,7 @@ window.Profile = (function() {
           '<div class="chat-overlay__avatar">' + (isNoAdmin ? '?' : 'A') + '</div>' +
           '<div class="chat-overlay__info">' +
             '<h2>' + esc(adminName || 'Администратор') + '</h2>' +
-            '<span>' + (isNoAdmin ? 'Нет в сети' : 'Администратор') + '</span>' +
+            '<span style="color:#10b981">' + (isNoAdmin ? 'Нет в сети' : '● В сети') + '</span>' +
           '</div>' +
         '</div>' +
         '<div class="chat-overlay__badge">Чат поддержки</div>' +
@@ -936,6 +969,7 @@ window.Profile = (function() {
     if (!user || !admin) return;
 
     Data.sendMessage(userId, user.name, adminId, admin.name, text);
+    maybeAutoReply(userId, user.name, adminId, admin.name);
     renderOverlayMessages(userId, adminId);
     renderOverlayPurchases(userId);
   }

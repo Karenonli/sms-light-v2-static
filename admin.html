@@ -1321,6 +1321,8 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
         .then(function(r) { return r.json(); })
         .then(function(data) {
           _usersCache = data.users || [];
+          // Дублируем в localStorage — на нём строятся диалоги чата (Data.getAllConversations)
+          try { localStorage.setItem('sms_users', JSON.stringify(_usersCache)); } catch(e) {}
           renderUsers(_usersCache);
         })
         .catch(function() {

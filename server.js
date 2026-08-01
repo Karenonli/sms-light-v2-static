@@ -414,6 +414,17 @@ app.get('/api/auth/me', async (req, res) => {
   res.json({ authed: true, ...user });
 });
 
+// Публичный список пользователей для чата (id/имя/админ — без email)
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await db.all('SELECT id, name, nickname, is_admin FROM users ORDER BY id ASC');
+    res.json({ users });
+  } catch (err) {
+    console.error('Get users error:', err);
+    res.json({ users: [] });
+  }
+});
+
 // ========================================================================
 //  API: Админка
 // ========================================================================

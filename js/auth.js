@@ -6,10 +6,49 @@
 
   window.Auth = {
     // ===== Users (админка: с сервера) =====
+    _usersCache: null,
     getUsers: function() {
-      // Синхронное fallback: если нет сессии, возвращаем пустой массив
-      // Админка вызывает перезагрузку через loadUsers() — async
-      return [];
+      // Сначала in-memory кэш, затем localStorage (заполняется syncUsers)
+      if (this._usersCache) return this._usersCache;
+      try {
+        var arr = JSON.parse(localStorage.getItem('sms_users')) || [];
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i] && typeof arr[i].is_admin === 'boolean') arr[i].is_admin = arr[i].is_admin ? 1 : 0;
+        }
+        return arr;
+      }
+      catch(e) { return []; }
+    },
+    // Загрузка списка пользователей с сервера (для чата). В демо-режиме file:// — локальные пользователи.
+    syncUsers: function() {
+      var self = this;
+      return fetch('/api/users')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var users = data.users || [];
+          self._usersCache = users;
+          try { localStorage.setItem('sms_users', JSON.stringify(users)); } catch(e) {}
+          return users;
+        })
+        .catch(function() {
+          // file:// или офлайн — берём локальных пользователей демо-режима
+          var local = [];
+          try {
+            var map = JSON.parse(localStorage.getItem(self.LOCAL_USERS_KEY)) || {};
+            for (var k in map) {
+              if (!map.hasOwnProperty(k)) continue;
+              var u = map[k];
+              u.id = parseInt(u.id);
+              if (isNaN(u.id)) continue;
+              local.push({ id: u.id, name: u.name, nickname: u.nickname || '', is_admin: u.is_admin ? 1 : 0 });
+            }
+          } catch(e) {}
+          if (local.length) {
+            self._usersCache = local;
+            try { localStorage.setItem('sms_users', JSON.stringify(local)); } catch(e2) {}
+          }
+          return local;
+        });
     },
 
     // ===== Session =====

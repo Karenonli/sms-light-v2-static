@@ -70,8 +70,15 @@
   </main>
 
   <script src="js/data.js"></script>
+  <script src="js/chat-server.js"></script>
   <script src="js/main.js"></script>
   <script src="js/profile.js"></script>
   <script>Auth.applyTheme(); var r=function(){Auth.updateNav()}; document.readyState==='loading'?document.addEventListener('DOMContentLoaded',r):r();</script>
+  <script>
+  (function() {
+    var session = Auth && Auth.getSession();
+    if (session) { Auth.syncUsers(); ChatServer.startSync(); }
+  })();
+  </script>
 </body>
 </html>

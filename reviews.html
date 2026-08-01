@@ -213,6 +213,7 @@
   </main>
 
   <script src="js/main.js"></script>
+  <script src="js/chat-server.js"></script>
   <script src="js/profile.js"></script>
   <script>
     var currentFilter = 0;
@@ -337,6 +338,10 @@
     } else {
       navReady();
     }
+
+    // Синхронизация чата (если авторизован)
+    var rvSession = Auth.getSession();
+    if (rvSession) { Auth.syncUsers(); ChatServer.startSync(); }
   </script>
 </body>
 </html>

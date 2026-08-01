@@ -2152,6 +2152,13 @@ input, button, select, textarea { font-family: inherit; }
   color: var(--gray-100);
   margin-bottom: 16px;
 }
+.profile-online {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  margin-bottom: 14px;
+}
 .profile-section__subheader {
   font-size: 14px;
   font-weight: 600;

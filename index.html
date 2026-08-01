@@ -652,24 +652,48 @@
         document.getElementById('tgOrderBuyInfo').style.color = 'var(--color-accent)';
       }
 
+      // ======== Автоответчик: ответ администратора на первое сообщение/заказ ========
+      function maybeAutoReply(userId, userName, adminId, adminName) {
+        if (!userId || !adminId) return;
+        var conv = Data.getConversation(userId, adminId);
+        for (var i = 0; i < conv.length; i++) {
+          if (conv[i].senderId === adminId) return; // админ уже отвечал — не спамим
+        }
+        Data.sendMessage(
+          adminId, adminName,
+          userId, userName,
+          'Здравствуйте! Ваш заказ будет выполнен через 30 сек - 5 минут. Ожидайте'
+        );
+      }
+
       // ======== Уведомление админа в чат (как FunPay) ========
       function notifyAdminOfPurchase(session, serviceName, country, price) {
-        var users = Auth.getUsers();
-        var adminId = null;
-        var adminName = 'Администратор';
-        for (var i = 0; i < users.length; i++) {
-          if (users[i].is_admin === 1) {
-            adminId = users[i].id;
-            adminName = users[i].name;
-            break;
+        if (!session) return;
+        var send = function() {
+          var users = Auth.getUsers();
+          var adminId = null;
+          var adminName = 'Администратор';
+          for (var i = 0; i < users.length; i++) {
+            if (users[i].is_admin === 1) {
+              adminId = users[i].id;
+              adminName = users[i].name;
+              break;
+            }
           }
+          if (!adminId) return false;
+          Data.sendMessage(
+            session.id, session.name,
+            adminId, adminName,
+            '🛒 Заказ: ' + serviceName + ', ' + country + ' — ' + price + ' ₽'
+          );
+          // Автоответ от администратора
+          maybeAutoReply(session.id, session.name, adminId, adminName);
+          return true;
+        };
+        if (!send()) {
+          // Список пользователей ещё не загрузился — подгружаем и пробуем снова
+          Auth.syncUsers().then(function() { send(); });
         }
-        if (!adminId || !session) return;
-        Data.sendMessage(
-          session.id, session.name,
-          adminId, adminName,
-          '🛒 Заказ: ' + serviceName + ', ' + country + ' — ' + price + ' ₽'
-        );
       }
 
       // ======== Utilities ========
@@ -848,6 +872,8 @@
   (function() {
     var session = Auth && Auth.getSession();
     if (session) {
+      // Синхронизация списка пользователей (чтобы чат находил администратора)
+      Auth.syncUsers();
       ChatServer.startSync();
     }
   })();

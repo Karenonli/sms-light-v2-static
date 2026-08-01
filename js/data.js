@@ -792,9 +792,15 @@ window.Data = (function() {
     getAllConversations: function() {
       var all = get(KEYS.messages);
       var allUsers = get('sms_users');
+      // Если localStorage ещё пуст — пробуем in-memory кэш Auth (серверный список)
+      if (!allUsers || allUsers.length === 0) {
+        if (typeof window.Auth !== 'undefined' && window.Auth.getUsers) {
+          allUsers = window.Auth.getUsers();
+        }
+      }
       var adminId = null;
       for (var i = 0; i < allUsers.length; i++) {
-        if (allUsers[i].is_admin === 1) { adminId = allUsers[i].id; break; }
+        if (allUsers[i].is_admin === 1 || allUsers[i].is_admin === true) { adminId = allUsers[i].id; break; }
       }
       if (!adminId) return [];
 
