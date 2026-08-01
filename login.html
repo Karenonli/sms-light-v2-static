@@ -328,7 +328,7 @@
           // Код на сайте не показываем — он приходит только на почту.
           document.getElementById('verifyBannerText').textContent = 'Не удалось отправить письмо. Проверьте правильность email и попробуйте ещё раз.';
         } else {
-          document.getElementById('verifyBannerText').textContent = 'Новый код отправлен на ' + _loginEmail;
+          document.getElementById('verifyBannerText').textContent = 'Новый код отправлен на ' + _loginEmail + '. Если письма нет — проверьте папку «Спам».';
         }
       }
     })

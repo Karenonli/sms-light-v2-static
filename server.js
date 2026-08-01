@@ -105,9 +105,40 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ error: 'Имя должно быть минимум 2 символа' });
     }
 
-    const existing = await db.get('SELECT id FROM users WHERE email = $1', [email]);
+    const existing = await db.get('SELECT id, email_verified FROM users WHERE email = $1', [email]);
     if (existing) {
-      return res.json({ error: 'Этот email уже зарегистрирован' });
+      // Email подтверждён — это дубликат, пусть войдёт.
+      if (existing.email_verified) {
+        return res.json({ error: 'Этот email уже зарегистрирован. Войдите в аккаунт.' });
+      }
+      // Email зарегистрирован, но не подтверждён (код потерян/не пришёл/истёк).
+      // Вместо тупика «уже зарегистрирован» генерируем и отправляем новый код.
+      const code = generateCode(6);
+      await db.run('UPDATE users SET verification_code = $1 WHERE id = $2', [code, existing.id]);
+      try {
+        await sendEmail(email, 'Подтверждение регистрации — SMS Light', templates.verification(code));
+        console.log(`→ Повторный код подтверждения для ${email}: ${code}`);
+        return res.json({
+          ok: true,
+          message: 'Код подтверждения отправлен на ваш email. Проверьте также папку «Спам».',
+          ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
+        });
+      } catch (emailErr) {
+        console.error('Failed to re-send verification email:', emailErr.message);
+        console.log(`→ [ВНИМАНИЕ] Повторный код для ${email}: ${code} (письмо не отправлено)`);
+        if (IS_DEV && isUsingFallback()) {
+          return res.json({
+            ok: true,
+            email_failed: true,
+            message: '⚠️ Не удалось отправить письмо с кодом. Но вы можете использовать код ниже для подтверждения.',
+            dev_code: code,
+          });
+        }
+        return res.json({
+          ok: true,
+          message: 'Код подтверждения запрошен. Если письмо не пришло в течение пары минут, проверьте правильность email и нажмите «Отправить снова».',
+        });
+      }
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -124,7 +155,7 @@ app.post('/api/auth/register', async (req, res) => {
       console.log(`→ Код подтверждения для ${email}: ${code}`);
       res.json({
         ok: true,
-        message: 'Код подтверждения отправлен на ваш email',
+        message: 'Код подтверждения отправлен на ваш email. Проверьте также папку «Спам».',
         ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
     } catch (emailErr) {
@@ -298,7 +329,7 @@ app.post('/api/auth/forgot', async (req, res) => {
       console.log(`→ Код восстановления для ${email}: ${code}`);
       res.json({
         ok: true,
-        message: 'Код восстановления отправлен на ваш email',
+        message: 'Код восстановления отправлен на ваш email. Проверьте также папку «Спам».',
         ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
     } catch (emailErr) {
