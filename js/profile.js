@@ -755,7 +755,9 @@ window.Profile = (function() {
 
     closeChatOverlay();
 
-    var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? (Data.getAdminId() || session.id) : session.id;
+    // Канонический id админа (первый is_admin). НЕ fallback на session.id —
+    // иначе админ (залогиненный под id=6) пишет в пару (6↔X), а покупатель ждёт в (1↔X).
+    var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
     var userName = user.name || 'Пользователь';
     var avatarLetter = userName[0].toUpperCase();
 
@@ -780,6 +782,7 @@ window.Profile = (function() {
         purchasesHtml += '<div class="chat-purchase-chip">' +
           '<span class="chat-purchase-chip__service">' + esc(p.serviceName) + '</span>' +
           '<span>' + flagHtml + ' ' + esc(p.country) + '</span>' +
+          (p.phoneNumber ? '<span class="chat-purchase-chip__phone">📞 ' + esc(p.phoneNumber) + '</span>' : '') +
           '<span class="chat-purchase-chip__price">' + p.price + ' ₽</span>' +
           '<span class="chat-purchase-chip__status ' + p.status + '">' + (labels[p.status] || p.status) + '</span>' +
         '</div>';
@@ -921,6 +924,7 @@ window.Profile = (function() {
       html += '<div class="chat-purchase-chip">' +
         '<span class="chat-purchase-chip__service">' + esc(p.serviceName) + '</span>' +
         '<span>' + flagHtml + ' ' + esc(p.country) + '</span>' +
+        (p.phoneNumber ? '<span class="chat-purchase-chip__phone">📞 ' + esc(p.phoneNumber) + '</span>' : '') +
         '<span class="chat-purchase-chip__price">' + p.price + ' ₽</span>' +
         '<span class="chat-purchase-chip__status ' + p.status + '">' + (labels[p.status] || p.status) + '</span>' +
       '</div>';

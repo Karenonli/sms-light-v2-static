@@ -2658,6 +2658,11 @@ input, button, select, textarea { font-family: inherit; }
   color: var(--green);
   font-weight: 600;
 }
+.chat-purchase-chip__phone {
+  color: var(--green-text, #10b981);
+  font-weight: 700;
+  font-size: 12px;
+}
 .chat-purchase-chip__status {
   padding: 1px 5px;
   border-radius: 6px;

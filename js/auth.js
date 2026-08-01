@@ -28,6 +28,9 @@
           var users = data.users || [];
           self._usersCache = users;
           try { localStorage.setItem('sms_users', JSON.stringify(users)); } catch(e) {}
+          if (typeof window.Data !== 'undefined' && window.Data.cacheAdminId) {
+            window.Data.cacheAdminId(users);
+          }
           return users;
         })
         .catch(function() {
@@ -46,6 +49,9 @@
           if (local.length) {
             self._usersCache = local;
             try { localStorage.setItem('sms_users', JSON.stringify(local)); } catch(e2) {}
+            if (typeof window.Data !== 'undefined' && window.Data.cacheAdminId) {
+              window.Data.cacheAdminId(local);
+            }
           }
           return local;
         });

@@ -221,6 +221,43 @@
       display: flex; flex-direction: column; gap: 8px;
       max-height: 360px;
     }
+    /* Закреплённый блок заказов: виден всегда, не скроллится вместе с сообщениями */
+    .chat-window__purchases {
+      border-bottom: 1px solid #222;
+      background: #0f0f0f;
+      max-height: 190px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .chat-window__purchases .chat-purchases {
+      max-height: none;
+      overflow-y: visible;
+      padding: 10px 16px;
+    }
+    .chat-purchase__phone {
+      font-weight: 700;
+      color: #10b981;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+    }
+    .chat-purchase__phone--empty {
+      font-weight: 500;
+      color: #6b7280;
+      font-style: italic;
+      font-size: 12px;
+    }
+    .chat-purchase__active {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      background: rgba(16,185,129,0.15);
+      color: #10b981;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
     .chat-window__empty {
       text-align: center; color: #888; padding: 60px 20px; font-size: 14px;
     }
@@ -511,11 +548,18 @@
       background: #f9f9fb;
       border-color: #eee;
     }
+    [data-theme="light"] .chat-window__purchases {
+      background: #f9f9fb;
+      border-color: #eee;
+    }
     [data-theme="light"] .chat-purchase-card {
       background: #fff;
       border-color: #e0e0e0;
     }
     [data-theme="light"] .chat-purchase__service { color: #333; }
+    [data-theme="light"] .chat-purchase__phone { color: #059669; }
+    [data-theme="light"] .chat-purchase__phone--empty { color: #999; }
+    [data-theme="light"] .chat-purchase__active { color: #059669; background: rgba(5,150,105,0.12); }
     [data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.4); }
     [data-theme="light"] .modal {
       background: #fff;
@@ -1192,6 +1236,7 @@
             </div>
             <div class="chat-window" id="chatWindow">
               <div class="chat-window__header" id="chatWindowHeader">Выберите чат</div>
+              <div class="chat-window__purchases" id="chatWindowPurchases" style="display:none"></div>
               <div class="chat-window__messages" id="chatWindowMessages">
                 <div class="chat-window__empty">Выберите пользователя слева, чтобы начать переписку</div>
               </div>
@@ -1323,6 +1368,8 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
           _usersCache = data.users || [];
           // Дублируем в localStorage — на нём строятся диалоги чата (Data.getAllConversations)
           try { localStorage.setItem('sms_users', JSON.stringify(_usersCache)); } catch(e) {}
+          // Канонический id админа — чтобы getAdminId() работал даже до загрузки списка
+          if (typeof Data !== 'undefined' && Data.cacheAdminId) Data.cacheAdminId(_usersCache);
           renderUsers(_usersCache);
         })
         .catch(function() {
@@ -1598,8 +1645,12 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     function getAdminIdForChat() {
       var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
       if (!adminId) {
-        var session = Auth.getSession();
-        adminId = session ? session.id : null;
+        // Список пользователей ещё не загрузился — берём из кэша.
+        // НЕ используем session.id: это создаёт вторую «пару» (6↔19), и переписка расходится.
+        try {
+          var cached = parseInt(localStorage.getItem('sms_admin_id'), 10);
+          if (!isNaN(cached) && cached > 0) adminId = cached;
+        } catch(e) {}
       }
       return adminId;
     }
@@ -1623,12 +1674,13 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       document.getElementById('chatWindowHeader').textContent = 'Чат с ' + (user.name || 'Пользователем');
       document.getElementById('chatWindowInput').style.display = 'flex';
 
-      // Карточки покупок пользователя (как в FunPay)
+      // Закреплённые карточки заказов (как в FunPay) — всегда сверху чата,
+      // не скроллятся вместе с сообщениями. Видно сервис, страну, цену и номер.
       var userPurchases = Data.getPurchases(userId);
-      var purchasesHtml = '';
       var statusLabels = { pending: 'Ожидает', completed: 'Завершён', rejected: 'Отклонён' };
+      var purchasesEl = document.getElementById('chatWindowPurchases');
       if (userPurchases.length > 0) {
-        purchasesHtml = '<div class="chat-purchases">';
+        var purchasesHtml = '<div class="chat-purchases">';
         for (var pi = 0; pi < Math.min(userPurchases.length, 5); pi++) {
           var p = userPurchases[pi];
           var pDate = new Date(p.created_at).toLocaleString('ru-RU', {
@@ -1636,6 +1688,12 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
             hour: '2-digit', minute: '2-digit'
           });
           var pStatus = statusLabels[p.status] || 'Ожидает';
+          var phoneHtml = p.phoneNumber
+            ? '<span class="chat-purchase__phone">' + esc(p.phoneNumber) + '</span>'
+            : '<span class="chat-purchase__phone chat-purchase__phone--empty">номер не введён</span>';
+          var activeBadge = (pi === 0 && p.status !== 'rejected')
+            ? '<span class="chat-purchase__active">Активный заказ</span>'
+            : '';
           purchasesHtml += '<div class="chat-purchase-card">' +
             '<div class="chat-purchase__header">' +
               '<span class="chat-purchase__service">' + esc(p.serviceName) + '</span>' +
@@ -1643,18 +1701,22 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
             '</div>' +
             '<div class="chat-purchase__meta">' +
               '<span>' + (typeof Data !== 'undefined' ? Data.getCountryFlag(p.country) : '') + ' ' + esc(p.country) + '</span>' +
-              '<span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ' + (p.phoneNumber ? esc(p.phoneNumber) : '—') + '</span>' +
+              '<span>📞 ' + phoneHtml + '</span>' +
               '<span class="status-badge ' + p.status + '">' + pStatus + '</span>' +
             '</div>' +
-            '<div class="chat-purchase__date">' + pDate + '</div>' +
+            '<div class="chat-purchase__date">' + pDate + activeBadge + '</div>' +
           '</div>';
         }
         purchasesHtml += '</div>';
+        purchasesEl.innerHTML = purchasesHtml;
+        purchasesEl.style.display = 'block';
+      } else {
+        purchasesEl.style.display = 'none';
       }
 
       var msgsEl = document.getElementById('chatWindowMessages');
       if (messages.length === 0) {
-        msgsEl.innerHTML = purchasesHtml + '<div class="chat-window__empty">Напишите пользователю первым</div>';
+        msgsEl.innerHTML = '<div class="chat-window__empty">Напишите пользователю первым</div>';
       } else {
         var html = '';
         messages.forEach(function(m) {
@@ -1664,7 +1726,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
             '<div class="chat-msg__time">' + formatTime(m.created_at) + '</div>' +
           '</div>';
         });
-        msgsEl.innerHTML = purchasesHtml + html;
+        msgsEl.innerHTML = html;
       }
 
       msgsEl.scrollTop = msgsEl.scrollHeight;

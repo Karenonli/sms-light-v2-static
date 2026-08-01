@@ -798,6 +798,25 @@ window.Data = (function() {
       for (var i = 0; i < users.length; i++) {
         if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) return users[i].id;
       }
+      // Список ещё не загрузился (sms_users пуст) — берём канонический id из кэша.
+      // НИКОГДА не возвращаем session.id админа: иначе покупатель и админ пишут в разные пары.
+      try {
+        var cached = parseInt(localStorage.getItem('sms_admin_id'), 10);
+        if (!isNaN(cached) && cached > 0) return cached;
+      } catch(e) {}
+      return null;
+    },
+    // Сохранить канонический id админа (первый is_admin в списке) в кэш.
+    // Вызывается из Auth.syncUsers() и admin.html loadUsers() — чтобы getAdminId()
+    // работал даже до загрузки полного списка пользователей.
+    cacheAdminId: function(users) {
+      if (!users) return null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) {
+          try { localStorage.setItem('sms_admin_id', String(users[i].id)); } catch(e) {}
+          return users[i].id;
+        }
+      }
       return null;
     },
     getAdminName: function() {

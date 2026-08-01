@@ -662,14 +662,8 @@
       function notifyAdminOfPurchase(session, serviceName, country, price) {
         if (!session) return;
         var send = function() {
-          var users = Auth.getUsers();
-          var adminId = null;
-          for (var i = 0; i < users.length; i++) {
-            if (users[i].is_admin === 1) {
-              adminId = users[i].id;
-              break;
-            }
-          }
+          // Канонический id админа (с кэш-fallback sms_admin_id) — единый для всего чата
+          var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
           if (!adminId) return false;
           Data.sendMessage(
             session.id, session.name,
