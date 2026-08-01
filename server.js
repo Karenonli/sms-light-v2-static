@@ -541,6 +541,113 @@ app.post('/api/messages/read', async (req, res) => {
 });
 
 // ========================================================================
+//  API: Заказы (покупки)
+// ========================================================================
+
+// Приведение строки БД к клиентскому виду (snake_case → camelCase)
+function mapPurchase(m) {
+  return {
+    id: m.id,
+    userId: m.user_id,
+    serviceType: m.service_type,
+    serviceName: m.service_name,
+    country: m.country,
+    price: m.price,
+    currency: m.currency,
+    phoneNumber: m.phone_number,
+    status: m.status,
+    created_at: m.created_at,
+  };
+}
+
+// Создать заказ (аутентифицированный пользователь).
+// id передаётся клиентский (Date.now()+rand) — как у сообщений чата,
+// чтобы локальная покупка и серверная имели один id без конфликтов.
+app.post('/api/purchases', requireAuth, async (req, res) => {
+  try {
+    const { id, serviceType, serviceName, country, price, currency, created_at } = req.body;
+    if (!serviceName) return res.json({ error: 'Не указан сервис' });
+    const purId = id || (Date.now() + Math.floor(Math.random() * 1000));
+    await db.run(
+      `INSERT INTO purchases (id, user_id, service_type, service_name, country, price, currency, phone_number, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, '', 'pending', $8)
+       ON CONFLICT (id) DO NOTHING`,
+      [purId, req.session.userId, serviceType || 'virtual', serviceName, country || '', price || 0, currency || 'RUB', created_at || new Date().toISOString()]
+    );
+    res.json({ ok: true, id: purId });
+  } catch (err) {
+    console.error('Create purchase error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Мои заказы
+app.get('/api/purchases', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM purchases WHERE user_id = $1 ORDER BY created_at DESC', [req.session.userId]);
+    res.json({ purchases: rows.map(mapPurchase) });
+  } catch (err) {
+    console.error('Get purchases error:', err);
+    res.json({ purchases: [] });
+  }
+});
+
+// Все заказы (админ)
+app.get('/api/purchases/all', requireAdmin, async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM purchases ORDER BY created_at DESC');
+    res.json({ purchases: rows.map(mapPurchase) });
+  } catch (err) {
+    console.error('Get all purchases error:', err);
+    res.json({ purchases: [] });
+  }
+});
+
+// Обновить заказ (номер, статус).
+// Владелец (покупатель) может только отменить свой заказ (status=rejected).
+// Админ может выдать номер и поставить любой статус, в т.ч. «завершён».
+app.post('/api/purchases/update', requireAuth, async (req, res) => {
+  try {
+    const { id, phoneNumber, status } = req.body;
+    if (!id) return res.json({ error: 'Неверный ID заказа' });
+
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [id]);
+    if (!pur) return res.json({ error: 'Заказ не найден' });
+
+    const isOwner = pur.user_id === req.session.userId;
+    if (!isOwner && !req.session.isAdmin) {
+      return res.json({ error: 'Нет доступа к этому заказу' });
+    }
+
+    const sets = [];
+    const params = [];
+    if (phoneNumber !== undefined) {
+      if (!req.session.isAdmin) return res.json({ error: 'Номер может указывать только администратор' });
+      sets.push(`phone_number = $${sets.length + 1}`);
+      params.push(String(phoneNumber));
+    }
+    if (status !== undefined) {
+      const allowed = ['pending', 'completed', 'rejected'];
+      if (!allowed.includes(status)) return res.json({ error: 'Неверный статус' });
+      if (!req.session.isAdmin && status !== 'rejected') {
+        return res.json({ error: 'Покупатель может только отменить заказ' });
+      }
+      sets.push(`status = $${sets.length + 1}`);
+      params.push(status);
+    }
+
+    if (sets.length > 0) {
+      params.push(id);
+      await db.run(`UPDATE purchases SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Update purchase error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ========================================================================
 //  Экспорт + запуск
 // ========================================================================
 

@@ -18,6 +18,29 @@ window.Data = (function() {
     localStorage.setItem(k, JSON.stringify(v));
   }
 
+  // Базовый URL API. В file:// (демо-режим без сервера) origin='null' —
+  // возвращаем '', синхронизация с сервером не выполняется.
+  function apiBase() {
+    try {
+      var o = window.location.origin;
+      return (o && o !== 'null') ? o : '';
+    } catch(e) { return ''; }
+  }
+
+  // Fire-and-forget POST на сервер: если сервер недоступен — заказ останется
+  // в localStorage и будет запушен при следующем действии.
+  function postToServer(url, payload) {
+    var base = apiBase();
+    if (!base) return;
+    try {
+      fetch(base + url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() { /* ignore — офлайн */ });
+    } catch(e) { /* ignore */ }
+  }
+
   // ───────────────────────────────────────────
   // Catalog — 202 Services
   // ───────────────────────────────────────────
@@ -755,6 +778,7 @@ window.Data = (function() {
       };
       all.push(p);
       set(KEYS.purchases, all);
+      postToServer('/api/purchases', p);
       return p;
     },
     updatePurchase: function(id, updates) {
@@ -766,6 +790,50 @@ window.Data = (function() {
         }
       }
       set(KEYS.purchases, all);
+      // Синхронизируем с сервером только поля, которые меняет сервер
+      var sync = { id: id };
+      if (updates && updates.phoneNumber !== undefined) sync.phoneNumber = updates.phoneNumber;
+      if (updates && updates.status !== undefined) sync.status = updates.status;
+      postToServer('/api/purchases/update', sync);
+    },
+    // Объединить серверный список заказов с локальным (snake→camel, по id).
+    // Сервер авторитетен для статуса и номера: клиентские изменения уже запушены.
+    mergeServerPurchases: function(serverList) {
+      if (!serverList || serverList.length === 0) return;
+      var all = get(KEYS.purchases);
+      var byId = {};
+      for (var i = 0; i < all.length; i++) byId[all[i].id] = all[i];
+      var changed = false;
+      for (var j = 0; j < serverList.length; j++) {
+        var sp = serverList[j];
+        if (!sp || !sp.id) continue;
+        var p = {
+          id: sp.id,
+          userId: sp.userId !== undefined ? sp.userId : sp.user_id,
+          serviceType: sp.serviceType !== undefined ? sp.serviceType : sp.service_type,
+          serviceName: sp.serviceName !== undefined ? sp.serviceName : sp.service_name,
+          country: sp.country,
+          price: sp.price,
+          currency: sp.currency,
+          phoneNumber: sp.phoneNumber !== undefined ? sp.phoneNumber : (sp.phone_number || ''),
+          status: sp.status || 'pending',
+          created_at: sp.created_at
+        };
+        var existing = byId[p.id];
+        if (!existing) {
+          all.push(p);
+          byId[p.id] = p;
+          changed = true;
+        } else if (existing.status !== p.status || existing.phoneNumber !== p.phoneNumber) {
+          existing.status = p.status;
+          existing.phoneNumber = p.phoneNumber;
+          changed = true;
+        }
+      }
+      if (changed) {
+        all.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+        set(KEYS.purchases, all);
+      }
     },
 
     // ========== Chat Messages ==========

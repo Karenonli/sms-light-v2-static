@@ -344,6 +344,12 @@
       color: #6b7280;
       margin-top: 4px;
     }
+    .chat-purchase__actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .chat-purchase__actions .btn { flex: 1; justify-content: center; }
 
     /* Modal (order) */
     .modal-overlay {
@@ -1508,9 +1514,13 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     }
 
     // ====================== Purchases ======================
+    // Тянем заказы с сервера (админ → все), затем рендерим.
+    // Если сервер недоступен — показываем локальные из localStorage.
     function loadPurchases() {
-      var purchases = Data.getAllPurchases();
-      renderPurchases(purchases);
+      ChatServer.pullPurchases().then(function() {
+        var purchases = Data.getAllPurchases();
+        renderPurchases(purchases);
+      });
     }
 
     function renderPurchases(purchases) {
@@ -1593,6 +1603,22 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       updates.status = status;
 
       Data.updatePurchase(purchaseId, updates);
+      loadPurchases();
+      loadTickets();
+      loadChats();   // обновить карточки заказов в чатах
+    }
+
+    // Быстрая смена статуса заказа прямо из карточки чата или таблицы
+    function setPurchaseStatus(purchaseId, status) {
+      var found = false;
+      var all = Data.getAllPurchases();
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].id === purchaseId) { found = true; break; }
+      }
+      if (!found) return;
+      Data.updatePurchase(purchaseId, { status: status });
+      if (activeChatUserId) renderChatWindow(activeChatUserId);
+      loadChats();
       loadPurchases();
       loadTickets();
     }
@@ -1705,6 +1731,11 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
               '<span class="status-badge ' + p.status + '">' + pStatus + '</span>' +
             '</div>' +
             '<div class="chat-purchase__date">' + pDate + activeBadge + '</div>' +
+            (p.status === 'pending' ?
+              '<div class="chat-purchase__actions">' +
+                '<button class="btn btn--success btn--sm" onclick="setPurchaseStatus(' + p.id + ',\'completed\')">✓ Завершить</button>' +
+                '<button class="btn btn--danger btn--sm" onclick="setPurchaseStatus(' + p.id + ',\'rejected\')">✕ Отклонить</button>' +
+              '</div>' : '') +
           '</div>';
         }
         purchasesHtml += '</div>';

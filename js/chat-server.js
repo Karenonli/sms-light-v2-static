@@ -107,9 +107,27 @@ window.ChatServer = (function() {
       });
   }
 
-  // ===== Full sync: push → pull =====
+  // ===== Pull: получить заказы с сервера =====
+  // Админ тянет все заказы (/api/purchases/all), покупатель — только свои.
+  // Сессия идёт в cookie — fetch на тот же origin передаёт её автоматически.
+  function pullPurchases() {
+    var session = null;
+    try { session = (window.Auth && Auth.getSession) ? Auth.getSession() : null; } catch(e) {}
+    if (!session || !session.id) return Promise.resolve();
+    var url = session.is_admin ? SERVER_URL + '/api/purchases/all' : SERVER_URL + '/api/purchases';
+    return fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.purchases && typeof Data !== 'undefined' && Data.mergeServerPurchases) {
+          Data.mergeServerPurchases(data.purchases);
+        }
+      })
+      .catch(function() { /* офлайн — работаем локально */ });
+  }
+
+  // ===== Full sync: push → pull (сообщения + заказы) =====
   function fullSync() {
-    return pushUnsynced().then(pullFromServer);
+    return pushUnsynced().then(pullFromServer).then(pullPurchases);
   }
 
   // ===== Start/stop =====
@@ -139,6 +157,7 @@ window.ChatServer = (function() {
     startSync: startSync,
     stopSync: stopSync,
     fullSync: fullSync,
+    pullPurchases: pullPurchases,
     markRead: markRead
   };
 })();

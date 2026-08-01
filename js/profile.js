@@ -81,6 +81,12 @@ window.Profile = (function() {
     document.body.style.overflow = 'hidden';
     switchSection(currentSection);
     startChatPoll();
+    // Обновить статусы заказов с сервера (админ мог завершить/отклонить)
+    if (typeof ChatServer !== 'undefined' && ChatServer.pullPurchases) {
+      ChatServer.pullPurchases().then(function() {
+        if (isOpen) renderSection(currentSection);
+      });
+    }
   }
 
   function closeDrawer() {
@@ -169,6 +175,9 @@ window.Profile = (function() {
         '<span>' + p.price + ' ' + p.currency + '</span>' +
       '</div>' +
       '<div class="purchase__date">' + date + '</div>' +
+      (p.status === 'pending'
+        ? '<button class="btn btn--outline btn--sm purchase__cancel" onclick="Profile.cancelPurchase(' + p.id + ')">Отменить заказ</button>'
+        : '') +
     '</div>';
   }
 
@@ -506,6 +515,14 @@ window.Profile = (function() {
   // Order number (called from button)
   function orderNumber(type) {
     openOrderModal(type);
+  }
+
+  // Отменить заказ (покупатель ошибся / передумал). Сервер: status=rejected.
+  function cancelPurchase(purchaseId) {
+    if (!session) return;
+    if (!confirm('Отменить этот заказ?')) return;
+    Data.updatePurchase(purchaseId, { status: 'rejected' });
+    renderSection(currentSection);   // перерисовать текущую секцию
   }
 
   // Submit support ticket
@@ -1028,6 +1045,7 @@ window.Profile = (function() {
     openAdminChat: openAdminChat,
     orderNumber: orderNumber,
     openOrderModal: openOrderModal,
+    cancelPurchase: cancelPurchase,
     submitTicket: submitTicket,
     topUp: topUp,
     getAdminId: getAdminId,
