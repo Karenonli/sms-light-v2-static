@@ -126,6 +126,10 @@ app.post('/api/auth/register', async (req, res) => {
       } catch (emailErr) {
         console.error('Failed to re-send verification email:', emailErr.message);
         console.log(`→ [ВНИМАНИЕ] Повторный код для ${email}: ${code} (письмо не отправлено)`);
+        if (emailErr.invalidRecipient) {
+          console.log(`→ Почтовый ящик не существует: ${email}`);
+          return res.json({ error: 'Такого почтового ящика не существует. Проверьте правильность email.' });
+        }
         if (IS_DEV && isUsingFallback()) {
           return res.json({
             ok: true,
@@ -161,6 +165,12 @@ app.post('/api/auth/register', async (req, res) => {
     } catch (emailErr) {
       console.error('Failed to send verification email:', emailErr.message);
       console.log(`→ [ВНИМАНИЕ] Код для ${email}: ${code} (письмо не отправлено — SMTP недоступен)`);
+      // Почтовый ящик не существует (550) — говорим пользователю прямо, чтобы он
+      // исправил адрес, а не ждал письмо в несуществующий ящик.
+      if (emailErr.invalidRecipient) {
+        console.log(`→ Почтовый ящик не существует: ${email}`);
+        return res.json({ error: 'Такого почтового ящика не существует. Проверьте правильность email.' });
+      }
       // Код в ответе отдаём ТОЛЬКО когда SMTP не настроен вовсе (Ethereal, локальная
       // разработка). Если SMTP настроен, но не работает — нейтральное сообщение без кода.
       if (IS_DEV && isUsingFallback()) {

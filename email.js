@@ -328,6 +328,23 @@ async function verifyConnection() {
   }
 }
 
+// Простая HTML→text конвертация для текстовой версии письма.
+// Некоторые почтовые фильтры ниже ранжируют HTML-only письма (выше риск спама).
+function htmlToText(html) {
+  return String(html)
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ===== Отправка =====
 async function sendEmail(to, subject, html) {
   try {
@@ -337,6 +354,12 @@ async function sendEmail(to, subject, html) {
     const sendPromise = transporter.sendMail({
       from: process.env.SMTP_FROM || '"SMS Light" <noreply@sms-light.ru>',
       to, subject, html,
+      // Текстовая версия + заголовки повышают доставляемость
+      text: htmlToText(html),
+      headers: {
+        'X-Auto-Response-Suppress': 'All',
+        'Precedence': 'bulk',
+      },
     });
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout (15s)')), 15000)
@@ -353,6 +376,14 @@ async function sendEmail(to, subject, html) {
     return info;
   } catch (err) {
     console.error('>> Email error:', err.message);
+
+    // Классифицируем ошибку: получатель не существует (550 invalid mailbox / user
+    // not found). Форма регистрации использует это, чтобы ясно сказать пользователю,
+    // что адрес введён неверно, вместо нейтрального «проверьте email».
+    const response = String(err.response || '') + ' ' + String(err.message || '');
+    if (/invalid mailbox|user not found|does not exist|no such user|mailbox .*unavailable|recipient .*unavailable/i.test(response)) {
+      err.invalidRecipient = true;
+    }
 
     // Сбрасываем транспорт, чтобы следующая отправка создала свежее
     // SMTP-соединение. Это важно для serverless (Vercel): один сбой не должен
