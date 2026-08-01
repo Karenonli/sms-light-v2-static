@@ -807,13 +807,15 @@ window.Data = (function() {
       for (var j = 0; j < serverList.length; j++) {
         var sp = serverList[j];
         if (!sp || !sp.id) continue;
+        // pg отдаёт BIGINT (id/userId) строками — приводим к числам, чтобы
+        // строгие сравнения id === / userId === работали с локальными данными.
         var p = {
-          id: sp.id,
-          userId: sp.userId !== undefined ? sp.userId : sp.user_id,
+          id: Number(sp.id),
+          userId: Number(sp.userId !== undefined ? sp.userId : sp.user_id),
           serviceType: sp.serviceType !== undefined ? sp.serviceType : sp.service_type,
           serviceName: sp.serviceName !== undefined ? sp.serviceName : sp.service_name,
           country: sp.country,
-          price: sp.price,
+          price: Number(sp.price),
           currency: sp.currency,
           phoneNumber: sp.phoneNumber !== undefined ? sp.phoneNumber : (sp.phone_number || ''),
           status: sp.status || 'pending',
