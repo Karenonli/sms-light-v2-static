@@ -2496,6 +2496,33 @@ input, button, select, textarea { font-family: inherit; }
   font-size: 10px; opacity: 0.5; text-align: right;
   margin-top: 2px;
 }
+/* Индикатор «SMS Light печатает…» */
+.chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.chat-typing__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.chat-typing__dots i {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green-400, #10b981);
+  display: inline-block;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.chat-typing__dots i:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing__dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
 .chat-input {
   display: flex; gap: 8px;
 }
@@ -2701,6 +2728,18 @@ input, button, select, textarea { font-family: inherit; }
   text-align: right;
   margin-top: 2px;
 }
+/* Индикатор «SMS Light печатает…» в оверлее */
+.chat-overlay__typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.chat-overlay__typing:empty { display: none; }
 
 /* Input area */
 .chat-overlay__input {

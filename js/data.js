@@ -789,6 +789,42 @@ window.Data = (function() {
                (m.senderId === otherUserId && m.receiverId === userId);
       }).sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
     },
+    // ========== Единый канонический администратор (SMS Light) ==========
+    // Весь чат (покупатель + админка) опирается на ОДНОГО админа —
+    // первого в списке с is_admin. Иначе покупатель пишет админу id=1,
+    // а админ (залогиненный под id=6) отвечает с id=6 — и никто никого не видит.
+    getAdminId: function() {
+      var users = (typeof window.Auth !== 'undefined' && window.Auth.getUsers) ? window.Auth.getUsers() : [];
+      for (var i = 0; i < users.length; i++) {
+        if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) return users[i].id;
+      }
+      return null;
+    },
+    getAdminName: function() {
+      return 'SMS Light';
+    },
+    // Автоответчик: не «тупой автомат», а имитация живого человека —
+    // индикатор «печатает…» + задержка 2–4 секунды.
+    scheduleAutoReply: function(userId, userName, adminId, adminName) {
+      if (!userId || !adminId) return;
+      // Админ уже отвечал в этой переписке — не спамим
+      var conv = this.getConversation(userId, adminId);
+      for (var i = 0; i < conv.length; i++) {
+        if (conv[i].senderId === adminId) return;
+      }
+      // Показываем «SMS Light печатает…» в открытом чате (если он открыт)
+      if (typeof window.showAdminTyping === 'function') window.showAdminTyping(userId, adminId);
+      setTimeout(function() {
+        if (typeof window.hideAdminTyping === 'function') window.hideAdminTyping(userId, adminId);
+        Data.sendMessage(
+          adminId, adminName,
+          userId, userName,
+          'Здравствуйте! Ваш заказ будет выполнен через 30 сек - 5 минут. Ожидайте'
+        );
+        if (typeof window.refreshActiveChat === 'function') window.refreshActiveChat(userId, adminId);
+      }, 2200 + Math.random() * 1800);
+    },
+
     getAllConversations: function() {
       var all = get(KEYS.messages);
       var allUsers = get('sms_users');

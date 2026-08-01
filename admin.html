@@ -1592,10 +1592,23 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       el.innerHTML = html;
     }
 
+    // Единый канонический админ для всего чата — первый админ в списке.
+    // Если админ залогинен под другим id (например, id=6), чат всё равно
+    // ведётся от канонического id, иначе покупатель и админ пишут в разные «пары».
+    function getAdminIdForChat() {
+      var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
+      if (!adminId) {
+        var session = Auth.getSession();
+        adminId = session ? session.id : null;
+      }
+      return adminId;
+    }
+
     function renderChatWindow(userId) {
       activeChatUserId = userId;
       var session = Auth.getSession();
       var users = _usersCache;
+      var adminId = getAdminIdForChat();
 
       var user = null;
       for (var i = 0; i < users.length; i++) {
@@ -1603,9 +1616,9 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       }
       if (!user) return;
 
-      var messages = Data.getConversation(session.id, userId);
-      Data.markConversationRead(session.id, userId);
-      ChatServer.markRead(session.id, userId);   // ← синхронизация прочтения с сервером
+      var messages = Data.getConversation(adminId, userId);
+      Data.markConversationRead(adminId, userId);
+      ChatServer.markRead(adminId, userId);   // ← синхронизация прочтения с сервером
 
       document.getElementById('chatWindowHeader').textContent = 'Чат с ' + (user.name || 'Пользователем');
       document.getElementById('chatWindowInput').style.display = 'flex';
@@ -1645,7 +1658,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       } else {
         var html = '';
         messages.forEach(function(m) {
-          var isAdmin = m.senderId === session.id;
+          var isAdmin = m.senderId === adminId;
           html += '<div class="chat-msg ' + (isAdmin ? 'chat-msg--admin' : 'chat-msg--user') + '">' +
             '<div class="chat-msg__text">' + esc(m.text) + '</div>' +
             '<div class="chat-msg__time">' + formatTime(m.created_at) + '</div>' +
@@ -1682,17 +1695,16 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
       if (!text || !activeChatUserId) return;
       input.value = '';
 
-      var session = Auth.getSession();
+      var adminId = getAdminIdForChat();
       var users = _usersCache;
 
-      var admin = null, user = null;
+      var user = null;
       for (var i = 0; i < users.length; i++) {
-        if (users[i].id === session.id) admin = users[i];
         if (users[i].id === activeChatUserId) user = users[i];
       }
-      if (!admin || !user) return;
+      if (!user) return;
 
-      Data.sendMessage(session.id, admin.name, activeChatUserId, user.name, text);
+      Data.sendMessage(adminId, Data.getAdminName(), activeChatUserId, user.name, text);
       renderChatWindow(activeChatUserId);
       loadChats();
     }
@@ -1700,7 +1712,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
     function updateChatBadge() {
       var session = Auth.getSession();
       if (!session) return;
-      var count = Data.getUnreadCount(session.id);
+      var count = Data.getUnreadCount(getAdminIdForChat());
       var badge = document.getElementById('chatBadge');
       if (count > 0) {
         badge.textContent = count;

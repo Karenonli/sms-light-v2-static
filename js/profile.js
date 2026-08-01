@@ -301,7 +301,10 @@ window.Profile = (function() {
         '</div>';
       });
     }
-    html += '</div>';
+    html += '<div class="chat-typing" id="chatTyping" style="display:none">' +
+      '<span class="chat-typing__dots"><i></i><i></i><i></i></span>' +
+      '<span class="chat-typing__text">SMS Light печатает…</span>' +
+    '</div></div>';
 
     html += '<div class="chat-input">' +
       '<input type="text" id="chatInput" class="form-input" placeholder="Напишите сообщение..." autocomplete="off">' +
@@ -337,39 +340,44 @@ window.Profile = (function() {
     input.value = '';
 
     var users = Auth.getUsers();
-    var user = null, admin = null;
+    var user = null;
     for (var i = 0; i < users.length; i++) {
       if (users[i].id === userId) user = users[i];
-      if (users[i].id === adminId) admin = users[i];
     }
-    if (!user || !admin) return;
+    if (!user) return;
 
-    Data.sendMessage(userId, user.name, adminId, admin.name, text);
-    maybeAutoReply(userId, user.name, adminId, admin.name);
+    Data.sendMessage(userId, user.name, adminId, Data.getAdminName(), text);
     renderChat();
+    maybeAutoReply(userId, user.name, adminId, Data.getAdminName());
   }
 
-  // Автоответчик: если администратор ещё ни разу не отвечал — отправляем автоматический ответ
+  // Автоответчик: задержка 2–4 сек + индикатор «SMS Light печатает…» (логика в Data.scheduleAutoReply)
   function maybeAutoReply(userId, userName, adminId, adminName) {
-    if (!userId || !adminId || typeof Data === 'undefined') return;
-    var conv = Data.getConversation(userId, adminId);
-    for (var i = 0; i < conv.length; i++) {
-      if (conv[i].senderId === adminId) return; // админ уже отвечал — не спамим
-    }
-    Data.sendMessage(
-      adminId, adminName,
-      userId, userName,
-      'Здравствуйте! Ваш заказ будет выполнен через 30 сек - 5 минут. Ожидайте'
-    );
+    if (typeof Data === 'undefined' || !Data.scheduleAutoReply) return;
+    Data.scheduleAutoReply(userId, userName, adminId, adminName);
   }
 
   function getAdminId() {
-    var users = Auth.getUsers();
-    for (var i = 0; i < users.length; i++) {
-      if (users[i].is_admin === 1 || users[i].is_admin === true) return users[i].id;
-    }
-    return null;
+    return (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
   }
+
+  // ===== Индикатор «SMS Light печатает…» (вызывается из Data.scheduleAutoReply) =====
+  window.showAdminTyping = function() {
+    var d = document.getElementById('chatTyping');
+    if (d) d.style.display = 'flex';
+    var o = document.getElementById('chatOverlayTyping');
+    if (o) o.innerHTML = '<span class="chat-typing__dots"><i></i><i></i><i></i></span><span class="chat-typing__text">SMS Light печатает…</span>';
+  };
+  window.hideAdminTyping = function() {
+    var d = document.getElementById('chatTyping');
+    if (d) d.style.display = 'none';
+    var o = document.getElementById('chatOverlayTyping');
+    if (o) o.innerHTML = '';
+  };
+  window.refreshActiveChat = function(userId, adminId) {
+    if (document.getElementById('chatInput')) renderChat();
+    if (document.getElementById('chatOverlayInputField')) renderOverlayMessages(userId, adminId);
+  };
 
   // --- Admin Chat List (в профиле администратора) ---
   function renderAdminChatList(el) {
@@ -579,7 +587,7 @@ window.Profile = (function() {
         if (users[i].id === adminId) { admin = users[i]; break; }
       }
       if (admin) {
-        showChatOverlay(admin.name, session.id, adminId, false);
+        showChatOverlay(Data.getAdminName(), session.id, adminId, false);
         return;
       }
     }
@@ -599,7 +607,7 @@ window.Profile = (function() {
         showChatOverlay('Нет администратора', null, null, true);
         return;
       }
-      showChatOverlay(admin2.name, session.id, adminId2, false);
+      showChatOverlay(Data.getAdminName(), session.id, adminId2, false);
     });
   }
 
@@ -747,7 +755,7 @@ window.Profile = (function() {
 
     closeChatOverlay();
 
-    var adminId = session.id;
+    var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? (Data.getAdminId() || session.id) : session.id;
     var userName = user.name || 'Пользователь';
     var avatarLetter = userName[0].toUpperCase();
 
@@ -850,14 +858,13 @@ window.Profile = (function() {
     input.value = '';
 
     var users = Auth.getUsers();
-    var admin = null, user = null;
+    var user = null;
     for (var i = 0; i < users.length; i++) {
-      if (users[i].id === adminId) admin = users[i];
       if (users[i].id === userId) user = users[i];
     }
-    if (!admin || !user) return;
+    if (!user) return;
 
-    Data.sendMessage(adminId, admin.name, userId, user.name, text);
+    Data.sendMessage(adminId, Data.getAdminName(), userId, user.name, text);
 
     var msgsEl = document.getElementById('chatOverlayMessages');
     var messages = Data.getConversation(adminId, userId);
@@ -968,10 +975,10 @@ window.Profile = (function() {
     }
     if (!user || !admin) return;
 
-    Data.sendMessage(userId, user.name, adminId, admin.name, text);
-    maybeAutoReply(userId, user.name, adminId, admin.name);
+    Data.sendMessage(userId, user.name, adminId, Data.getAdminName(), text);
     renderOverlayMessages(userId, adminId);
     renderOverlayPurchases(userId);
+    maybeAutoReply(userId, user.name, adminId, Data.getAdminName());
   }
 
   function startOverlayPoll(userId, adminId) {

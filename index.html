@@ -654,16 +654,8 @@
 
       // ======== Автоответчик: ответ администратора на первое сообщение/заказ ========
       function maybeAutoReply(userId, userName, adminId, adminName) {
-        if (!userId || !adminId) return;
-        var conv = Data.getConversation(userId, adminId);
-        for (var i = 0; i < conv.length; i++) {
-          if (conv[i].senderId === adminId) return; // админ уже отвечал — не спамим
-        }
-        Data.sendMessage(
-          adminId, adminName,
-          userId, userName,
-          'Здравствуйте! Ваш заказ будет выполнен через 30 сек - 5 минут. Ожидайте'
-        );
+        if (typeof Data === 'undefined' || !Data.scheduleAutoReply) return;
+        Data.scheduleAutoReply(userId, userName, adminId, adminName);
       }
 
       // ======== Уведомление админа в чат (как FunPay) ========
@@ -672,22 +664,20 @@
         var send = function() {
           var users = Auth.getUsers();
           var adminId = null;
-          var adminName = 'Администратор';
           for (var i = 0; i < users.length; i++) {
             if (users[i].is_admin === 1) {
               adminId = users[i].id;
-              adminName = users[i].name;
               break;
             }
           }
           if (!adminId) return false;
           Data.sendMessage(
             session.id, session.name,
-            adminId, adminName,
+            adminId, Data.getAdminName(),
             '🛒 Заказ: ' + serviceName + ', ' + country + ' — ' + price + ' ₽'
           );
-          // Автоответ от администратора
-          maybeAutoReply(session.id, session.name, adminId, adminName);
+          // Автоответ от администратора (с задержкой и индикатором «печатает…»)
+          maybeAutoReply(session.id, session.name, adminId, Data.getAdminName());
           return true;
         };
         if (!send()) {
