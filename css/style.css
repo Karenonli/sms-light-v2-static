@@ -1328,6 +1328,95 @@ input, button, select, textarea { font-family: inherit; }
   line-height: 1.65;
 }
 
+/* --- Popular services (карточки быстрого выбора) --- */
+.popular {
+  padding: 0 0 48px;
+}
+.popular__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.popular__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.3px;
+  position: relative;
+  padding-bottom: 10px;
+}
+.popular__title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 36px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green-400), transparent);
+  border-radius: 2px;
+}
+.popular__count {
+  font-size: 13px;
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+.popular__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 14px;
+}
+.popular-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--gray-800);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.popular-card:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.popular-card__logo {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-subtle);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--green-text);
+  letter-spacing: 0.5px;
+}
+.popular-card__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--white);
+}
+.popular-card__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-400);
+}
+.popular-card__pick {
+  font-size: 12px;
+  color: var(--gray-500);
+  transition: color 0.2s ease;
+}
+.popular-card:hover .popular-card__pick {
+  color: var(--green-400);
+}
+
 /* --- Footer --- */
 .footer {
   position: relative;
@@ -2961,6 +3050,12 @@ input, button, select, textarea { font-family: inherit; }
   .testimonials__grid { grid-template-columns: 1fr; }
   .testimonials__header { flex-direction: column; align-items: flex-start; gap: 8px; }
 
+  /* Popular services */
+  .popular { padding: 0 0 40px; }
+  .popular__header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .popular__title { font-size: 20px; }
+  .popular__grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+
   /* Footer */
   .footer { padding: 40px 0 32px; }
   .footer__inner { flex-direction: column; text-align: center; gap: 12px; }
@@ -3531,6 +3626,15 @@ body::before {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
 }
 .feature-card__icon { border-radius: 12px; }
+.popular-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.popular-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+}
+.popular-card__logo { border-radius: 12px; }
 .testimonial-card {
   border-radius: 16px;
   background: linear-gradient(180deg, var(--surface-2), var(--surface));

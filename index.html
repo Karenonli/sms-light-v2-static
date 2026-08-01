@@ -187,6 +187,17 @@
   </div>
 </section>
 
+<!-- Popular services: quick choice cards -->
+<section class="popular reveal" id="popular">
+  <div class="container">
+    <div class="popular__header">
+      <h2 class="popular__title">Популярные сервисы</h2>
+      <span class="popular__count">Нажмите на сервис, чтобы выбрать его</span>
+    </div>
+    <div class="popular__grid" id="popularGrid"><!-- filled by JS --></div>
+  </div>
+</section>
+
 <!-- Order Section -->
 <section class="catalog reveal" id="services">
   <div class="container">
@@ -376,6 +387,37 @@
       function getSession() {
         session = Auth.getSession();
         return session;
+      }
+
+      // ======== Popular services cards (под hero) ========
+      var POPULAR = ['telegram', 'whatsapp', 'instagram', 'vk', 'tiktok',
+                     'x-twitter', 'discord', 'steam', 'binance', 'chatgpt',
+                     'netflix', 'google'];
+
+      function renderPopular() {
+        var grid = document.getElementById('popularGrid');
+        if (!grid || typeof Data === 'undefined') return;
+        var html = '';
+        for (var i = 0; i < POPULAR.length; i++) {
+          var s = Data.getService(POPULAR[i]);
+          if (!s) continue;
+          html +=
+            '<div class="popular-card reveal-item" style="animation-delay:' + (i * 0.04) + 's" onclick="Order.pickPopular(\'' + s.id + '\')">' +
+              '<span class="popular-card__logo">' + getLogo(s.id) + '</span>' +
+              '<span class="popular-card__name">' + esc(s.name) + '</span>' +
+              '<span class="popular-card__price">' + fmtPrice(s.price) + '</span>' +
+              '<span class="popular-card__pick">Выбрать →</span>' +
+            '</div>';
+        }
+        grid.innerHTML = html;
+      }
+
+      function pickPopular(id) {
+        // Переключаемся на вкладку «Виртуальные номера» и заполняем сервис
+        setMode('virtual');
+        pickService(id);
+        var el = document.getElementById('services');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       // ======== Mode Switching ========
@@ -746,10 +788,13 @@
             el.textContent = fmtPrice(parseFloat(parent.dataset.price));
           }
         });
+        // Update popular cards prices
+        renderPopular();
       }
 
       // ======== Init ========
       function init() {
+        renderPopular();
         initServiceDropdown();
         // Pre-populate Telegram country dropdown
         initTgCountryDropdown();
@@ -772,6 +817,7 @@
         pickService: pickService,
         pickCountry: pickCountry,
         pickTgCountry: pickTgCountry,
+        pickPopular: pickPopular,
         buy: buy,
         buyTelegram: buyTelegram,
         selectTelegramType: selectTelegramType,
