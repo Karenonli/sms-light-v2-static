@@ -889,7 +889,46 @@ window.Data = (function() {
           });
         }
       }
-      result.sort(function(a, b) { return new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at); });
+      // Дополняем покупателями, у которых есть заказы, но ещё нет переписки:
+      // админ видит их в списке чатов и может написать номер/SMS первым.
+      var purchases = get(KEYS.purchases);
+      var lastPurchaseTime = {};
+      for (var pi = 0; pi < purchases.length; pi++) {
+        var pur = purchases[pi];
+        if (!pur || !pur.userId) continue;
+        var pid = parseInt(pur.userId);
+        if (isNaN(pid)) continue;
+        var pt = new Date(pur.created_at).getTime();
+        if (!lastPurchaseTime[pid] || pt > lastPurchaseTime[pid]) lastPurchaseTime[pid] = pt;
+      }
+      for (var buid in lastPurchaseTime) {
+        if (!lastPurchaseTime.hasOwnProperty(buid)) continue;
+        var buyerId = parseInt(buid);
+        if (buyerId === adminId || userIds[buyerId]) continue; // админ или уже в переписке
+        var buyer = null;
+        for (var bj = 0; bj < allUsers.length; bj++) {
+          if (allUsers[bj].id === buyerId) { buyer = allUsers[bj]; break; }
+        }
+        if (buyer && (buyer.is_admin === 1 || buyer.is_admin === true)) continue;
+        userIds[buyerId] = true;
+        result.push({
+          otherUserId: buyerId,
+          otherUserName: buyer ? buyer.name : 'Пользователь',
+          otherUserEmail: buyer ? buyer.email : '',
+          lastMessage: null,
+          unread: 0,
+          messages: [],
+          lastPurchaseTime: lastPurchaseTime[buyerId]
+        });
+      }
+
+      // Сортировка: чаты с перепиской — по последнему сообщению,
+      // без переписки — по дате последнего заказа.
+      result.sort(function(a, b) {
+        var ta = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : (a.lastPurchaseTime || 0);
+        var tb = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : (b.lastPurchaseTime || 0);
+        return tb - ta;
+      });
       return result;
     },
     markConversationRead: function(userId, otherUserId) {

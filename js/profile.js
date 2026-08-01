@@ -395,7 +395,15 @@ window.Profile = (function() {
       var c = conversations[i];
       var initial = (c.otherUserName || '?')[0].toUpperCase();
       var preview = c.lastMessage ? c.lastMessage.text : '';
-      if (!preview) preview = 'Нет сообщений';
+      if (!preview) {
+        var pur = Data.getPurchases(c.otherUserId);
+        if (pur.length > 0) {
+          var lp = pur[0];
+          preview = (lp.serviceName || 'Заказ') + (lp.country ? ' · ' + lp.country : '');
+        } else {
+          preview = 'Нет сообщений';
+        }
+      }
       var unreadBadge = c.unread > 0
         ? '<span class="admin-chat-badge">' + c.unread + '</span>'
         : '';
@@ -707,7 +715,16 @@ window.Profile = (function() {
       for (var i = 0; i < conversations.length; i++) {
         var c = conversations[i];
         var initial = (c.otherUserName || '?')[0].toUpperCase();
-        var preview = c.lastMessage ? c.lastMessage.text : 'Нет сообщений';
+        var preview = c.lastMessage ? c.lastMessage.text : '';
+        if (!preview) {
+          var pur = Data.getPurchases(c.otherUserId);
+          if (pur.length > 0) {
+            var lp = pur[0];
+            preview = (lp.serviceName || 'Заказ') + (lp.country ? ' · ' + lp.country : '');
+          } else {
+            preview = 'Нет сообщений';
+          }
+        }
         var unreadBadge = c.unread > 0
           ? '<span class="chat-list__unread" style="display:inline-flex;margin-left:auto">' + c.unread + '</span>'
           : '';
