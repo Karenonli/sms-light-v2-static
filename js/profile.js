@@ -87,6 +87,12 @@ window.Profile = (function() {
         if (isOpen) renderSection(currentSection);
       });
     }
+    // Подтянуть мои отзывы, чтобы кнопка в карточке показала «Изменить отзыв»
+    if (typeof Data !== 'undefined' && Data.fetchMyReviews) {
+      Data.fetchMyReviews(function() {
+        if (isOpen) renderSection(currentSection);
+      });
+    }
   }
 
   function closeDrawer() {
@@ -175,10 +181,18 @@ window.Profile = (function() {
         '<span>' + p.price + ' ' + p.currency + '</span>' +
       '</div>' +
       '<div class="purchase__date">' + date + '</div>' +
+      (p.status === 'completed'
+        ? '<button class="btn btn--outline btn--sm purchase__review" onclick="Profile.openReviewModal(' + p.id + ')">' + reviewBtnLabel(p.id) + '</button>'
+        : '') +
       (p.status === 'pending'
         ? '<button class="btn btn--outline btn--sm purchase__cancel" onclick="Profile.cancelPurchase(' + p.id + ')">Отменить заказ</button>'
         : '') +
     '</div>';
+  }
+
+  // Если на покупку уже оставлен отзыв (из /api/reviews/mine) — предлагаем изменить
+  function reviewBtnLabel(purchaseId) {
+    return Data.hasReviewFor(purchaseId) ? '✏️ Изменить отзыв' : '⭐ Оставить отзыв';
   }
 
   // ========== Order Modal ==========
@@ -523,6 +537,115 @@ window.Profile = (function() {
     if (!confirm('Отменить этот заказ?')) return;
     Data.updatePurchase(purchaseId, { status: 'rejected' });
     renderSection(currentSection);   // перерисовать текущую секцию
+  }
+
+  // ========== Review Modal (после завершённой покупки) ==========
+  function openReviewModal(purchaseId) {
+    session = Auth.getSession();
+    if (!session) { alert('Необходимо авторизоваться'); return; }
+
+    var p = null;
+    var all = Data.getPurchases(session.id);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].id === purchaseId) { p = all[i]; break; }
+    }
+    if (!p) return;
+
+    var existing = Data.hasReviewFor(purchaseId);
+    var chosenRating = existing ? existing.rating : 5;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+
+    var starsHtml = '';
+    for (var s = 1; s <= 5; s++) {
+      starsHtml += '<span class="review-star' + (s <= chosenRating ? ' active' : '') + '" data-rating="' + s + '">★</span>';
+    }
+
+    modal.innerHTML =
+      '<div class="modal__header">' +
+        '<h3>' + (existing ? 'Изменить отзыв' : 'Оставить отзыв') + '</h3>' +
+        '<button class="modal__close" id="reviewModalClose">✕</button>' +
+      '</div>' +
+      '<div class="modal__body">' +
+        '<div class="review-form">' +
+          '<div class="review-form__label">Ваша оценка</div>' +
+          '<div class="review-form__stars">' + starsHtml + '</div>' +
+          '<div class="review-form__label">Сервис</div>' +
+          '<div class="review-form__service">' + esc(p.serviceName) + '</div>' +
+          '<div class="review-form__label">Ваш отзыв</div>' +
+          '<textarea id="reviewText" class="review-form__textarea" maxlength="500" rows="4" placeholder="Расскажите, как всё прошло...">' + (existing ? esc(existing.text) : '') + '</textarea>' +
+          '<div class="review-form__hint">Осталось символов: <span id="reviewChars">' + (existing ? 500 - existing.text.length : 500) + '</span></div>' +
+          '<div class="review-form__error" id="reviewError"></div>' +
+          '<button class="btn btn--full" id="reviewSubmit">' + (existing ? 'Сохранить отзыв' : 'Отправить отзыв') + '</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    overlay.classList.add('visible');
+    modal.classList.add('open');
+
+    var currentRating = chosenRating;
+    var stars = modal.querySelectorAll('.review-star');
+    stars.forEach(function(st) {
+      st.addEventListener('click', function() {
+        currentRating = parseInt(this.dataset.rating, 10);
+        stars.forEach(function(x) {
+          x.classList.toggle('active', parseInt(x.dataset.rating, 10) <= currentRating);
+        });
+      });
+    });
+
+    var ta = document.getElementById('reviewText');
+    var ch = document.getElementById('reviewChars');
+    if (ta && ch) {
+      ta.addEventListener('input', function() {
+        ch.textContent = 500 - ta.value.length;
+      });
+    }
+
+    function closeReviewModal() {
+      overlay.classList.remove('visible');
+      modal.classList.remove('open');
+      setTimeout(function() {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (modal.parentNode) modal.parentNode.removeChild(modal);
+      }, 300);
+    }
+    window.__closeReviewModal = closeReviewModal;
+
+    document.getElementById('reviewModalClose').addEventListener('click', closeReviewModal);
+    overlay.addEventListener('click', closeReviewModal);
+
+    document.getElementById('reviewSubmit').addEventListener('click', function() {
+      var text = ta.value.trim();
+      var err = document.getElementById('reviewError');
+      if (text.length < 5) { err.textContent = 'Отзыв слишком короткий'; return; }
+      this.disabled = true;
+      err.textContent = '';
+      Data.submitReview({
+        purchaseId: purchaseId,
+        rating: currentRating,
+        service: p.serviceName,
+        text: text
+      }, function(res) {
+        if (res && res.ok) {
+          closeReviewModal();
+          renderSection(currentSection);   // кнопка станет «Изменить отзыв»
+        } else {
+          err.textContent = (res && res.error) || 'Не удалось отправить отзыв. Попробуйте ещё раз.';
+          var btn = document.getElementById('reviewSubmit');
+          if (btn) btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function closeReviewModal() {
+    if (window.__closeReviewModal) window.__closeReviewModal();
   }
 
   // Submit support ticket
@@ -1046,6 +1169,8 @@ window.Profile = (function() {
     orderNumber: orderNumber,
     openOrderModal: openOrderModal,
     cancelPurchase: cancelPurchase,
+    openReviewModal: openReviewModal,
+    closeReviewModal: closeReviewModal,
     submitTicket: submitTicket,
     topUp: topUp,
     getAdminId: getAdminId,

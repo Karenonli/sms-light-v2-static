@@ -2338,6 +2338,76 @@ input, button, select, textarea { font-family: inherit; }
   border-color: #ef4444;
   color: #ef4444;
 }
+.purchase__review {
+  margin-top: 10px;
+  width: 100%;
+  border-color: var(--green);
+  color: var(--green-text);
+}
+.purchase__review:hover {
+  background: var(--green-subtle);
+}
+
+/* Review modal (отзыв после завершённой покупки) */
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.review-form__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.review-form__stars {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.review-star {
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--gray-700);
+  transition: color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+}
+.review-star:hover { transform: scale(1.15); }
+.review-star.active { color: #f59e0b; }
+.review-form__service {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-100);
+  margin-bottom: 8px;
+}
+.review-form__textarea {
+  width: 100%;
+  background: var(--drawer-header);
+  border: 1px solid var(--drawer-border);
+  border-radius: 10px;
+  color: var(--gray-200);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 96px;
+}
+.review-form__textarea:focus {
+  outline: none;
+  border-color: var(--green);
+}
+.review-form__hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  margin-top: -2px;
+}
+.review-form__error {
+  font-size: 13px;
+  color: #ef4444;
+  min-height: 18px;
+}
 
 /* Support form */
 .support-form {

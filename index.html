@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
   <style>
     /* Preloader — entrance animation before page content */
     .preloader {
@@ -874,8 +874,6 @@
   (function() {
     var grid = document.getElementById('testimonialsGrid');
     if (!grid || typeof Data === 'undefined') return;
-    var reviews = Data.getReviews(6);
-    if (!reviews || reviews.length === 0) { grid.innerHTML = ''; return; }
 
     function renderStars(rating) {
       var s = '';
@@ -889,19 +887,30 @@
       return d.innerHTML;
     }
 
-    var html = '';
-    for (var i = 0; i < reviews.length; i++) {
-      var r = reviews[i];
-      html += '<div class="testimonial-card reveal-item" style="animation-delay:' + (i * 0.08) + 's">' +
-        '<div class="testimonial-card__top">' +
-          '<span class="testimonial-card__author">' + escHtml(r.author) + '</span>' +
-          '<span class="testimonial-card__rating">' + renderStars(r.rating) + '</span>' +
-        '</div>' +
-        '<div class="testimonial-card__service">' + escHtml(r.service) + '</div>' +
-        '<div class="testimonial-card__text">' + escHtml(r.text) + '</div>' +
-      '</div>';
+    function renderTestimonials() {
+      var reviews = Data.getReviews(6);
+      if (!reviews || reviews.length === 0) { grid.innerHTML = ''; return; }
+
+      var html = '';
+      for (var i = 0; i < reviews.length; i++) {
+        var r = reviews[i];
+        html += '<div class="testimonial-card reveal-item" style="animation-delay:' + (i * 0.08) + 's">' +
+          '<div class="testimonial-card__top">' +
+            '<span class="testimonial-card__author">' + escHtml(r.author) + '</span>' +
+            '<span class="testimonial-card__rating">' + renderStars(r.rating) + '</span>' +
+          '</div>' +
+          '<div class="testimonial-card__service">' + escHtml(r.service) + '</div>' +
+          '<div class="testimonial-card__text">' + escHtml(r.text) + '</div>' +
+        '</div>';
+      }
+      grid.innerHTML = html;
     }
-    grid.innerHTML = html;
+
+    // Сразу рисуем из статичных отзывов, затем — серверные (свежие) поверх
+    renderTestimonials();
+    if (typeof Data.fetchServerReviews === 'function') {
+      Data.fetchServerReviews(function() { renderTestimonials(); });
+    }
   })();
   </script>
 

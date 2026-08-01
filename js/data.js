@@ -753,6 +753,39 @@ window.Data = (function() {
     { author: 'glacier', rating: 5, service: 'Instagram', text: 'Номер пришёл мгновенно, инстаграм принял без проблем. Очень удобно для создания второго аккаунта.', date: 'Август 2026' },
   ];
 
+  // ───────────────────────────────────────────
+  // Отзывы покупателей с сервера (после завершённых заказов).
+  // Объединяются со статичным REVIEWS в getReviews(): серверные — свежие, сверху.
+  // ───────────────────────────────────────────
+  var serverReviews = [];
+  var myReviews = [];
+
+  function loadJson(url, cb) {
+    var base = apiBase();
+    if (!base) { if (cb) cb(null); return; }
+    try {
+      fetch(base + url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) { if (cb) cb(data); })
+        .catch(function() { if (cb) cb(null); });
+    } catch (e) { if (cb) cb(null); }
+  }
+
+  function postJson(url, payload, cb) {
+    var base = apiBase();
+    if (!base) { if (cb) cb(null); return; }
+    try {
+      fetch(base + url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) { if (cb) cb(data); })
+        .catch(function() { if (cb) cb(null); });
+    } catch (e) { if (cb) cb(null); }
+  }
+
   return {
     // ========== Purchases ==========
     getPurchases: function(userId) {
@@ -1112,8 +1145,40 @@ window.Data = (function() {
       return COUNTRY_ISO[name] || '';
     },
     getReviews: function(limit) {
-      if (limit) return REVIEWS.slice(0, limit);
-      return REVIEWS.slice();
+      var all = serverReviews.slice().concat(REVIEWS);
+      if (limit) return all.slice(0, limit);
+      return all;
+    },
+
+    // ========== Reviews (сервер) ==========
+    fetchServerReviews: function(cb) {
+      loadJson('/api/reviews', function(data) {
+        serverReviews = (data && data.reviews) || [];
+        if (cb) cb(serverReviews.slice());
+      });
+    },
+    fetchMyReviews: function(cb) {
+      loadJson('/api/reviews/mine', function(data) {
+        myReviews = (data && data.reviews) || [];
+        if (cb) cb(myReviews.slice());
+      });
+    },
+    getMyReviews: function() { return myReviews.slice(); },
+    // Отзыв, уже оставленный на эту покупку (или null)
+    hasReviewFor: function(purchaseId) {
+      for (var i = 0; i < myReviews.length; i++) {
+        if (Number(myReviews[i].purchaseId) === Number(purchaseId)) return myReviews[i];
+      }
+      return null;
+    },
+    submitReview: function(payload, cb) {
+      postJson('/api/reviews', payload, function(data) {
+        if (data && data.ok) {
+          // Обновляем кэш моих отзывов, чтобы кнопка сменилась на «Изменить отзыв»
+          Data.fetchMyReviews();
+        }
+        if (cb) cb(data);
+      });
     }
   };
 })();

@@ -661,6 +661,105 @@ app.delete('/api/purchases/:id', requireAdmin, async (req, res) => {
 });
 
 // ========================================================================
+//  API: Отзывы
+// ========================================================================
+
+const REVIEW_MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+// Дата отзыва в том же формате, что у статичных отзывов: «Июль 2026»
+function formatReviewDate(ts) {
+  try {
+    const d = new Date(ts);
+    return REVIEW_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  } catch (e) {
+    return '';
+  }
+}
+
+function mapReview(r) {
+  return {
+    id: r.id,
+    author: r.author,
+    rating: r.rating,
+    service: r.service,
+    text: r.text,
+    date: formatReviewDate(r.created_at),
+  };
+}
+
+// Публичный список отзывов (свежие сверху)
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM reviews ORDER BY created_at DESC');
+    res.json({ reviews: rows.map(mapReview) });
+  } catch (err) {
+    console.error('Get reviews error:', err);
+    res.json({ reviews: [] });
+  }
+});
+
+// Мои отзывы (для личного кабинета — чтобы знать, на какую покупку уже оставлен отзыв)
+app.get('/api/reviews/mine', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM reviews WHERE user_id = $1 ORDER BY created_at DESC', [req.session.userId]);
+    res.json({
+      reviews: rows.map(r => Object.assign(mapReview(r), { purchaseId: Number(r.purchase_id) })),
+    });
+  } catch (err) {
+    console.error('Get my reviews error:', err);
+    res.json({ reviews: [] });
+  }
+});
+
+// Оставить/изменить отзыв. Только на завершённую покупку, один отзыв на покупку.
+app.post('/api/reviews', requireAuth, async (req, res) => {
+  try {
+    const { purchaseId, rating, service, text } = req.body;
+    const purId = Number(purchaseId);
+    if (!purId) return res.json({ error: 'Не указан заказ' });
+
+    const r = Math.round(Number(rating));
+    if (!r || r < 1 || r > 5) return res.json({ error: 'Поставьте оценку от 1 до 5' });
+
+    const t = String(text || '').trim();
+    if (t.length < 5) return res.json({ error: 'Отзыв слишком короткий' });
+    if (t.length > 500) return res.json({ error: 'Отзыв слишком длинный (максимум 500 символов)' });
+
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [purId]);
+    if (!pur) return res.json({ error: 'Заказ не найден' });
+    if (pur.user_id !== req.session.userId) return res.json({ error: 'Нет доступа к этому заказу' });
+    if (pur.status !== 'completed') return res.json({ error: 'Отзыв можно оставить только после завершения заказа' });
+
+    const user = await db.get('SELECT name FROM users WHERE id = $1', [req.session.userId]);
+    const author = (user && user.name) || 'Покупатель';
+
+    await db.run(
+      `INSERT INTO reviews (user_id, author, rating, service, text, purchase_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (purchase_id) DO UPDATE SET rating = $3, service = $4, text = $5`,
+      [req.session.userId, author, r, String(service || pur.service_name), t, purId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Create review error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить отзыв (админ) — модерация
+app.delete('/api/reviews/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.json({ error: 'Неверный ID' });
+    await db.run('DELETE FROM reviews WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete review error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ========================================================================
 //  Экспорт + запуск
 // ========================================================================
 

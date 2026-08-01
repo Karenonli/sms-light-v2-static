@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
   <style>
     .page-reviews { padding: 60px 0; max-width: 800px; margin: 0 auto; }
     .page-reviews h1 { font-size: 28px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
@@ -329,6 +329,14 @@
     renderStats();
     renderFilters();
     renderReviews();
+
+    // Подгрузить отзывы покупателей с сервера и перерисовать (статистика + список)
+    if (typeof Data.fetchServerReviews === 'function') {
+      Data.fetchServerReviews(function() {
+        renderStats();
+        renderReviews();
+      });
+    }
 
     // Update nav auth
     Auth.applyTheme();
