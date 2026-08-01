@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
   <style>
     /* Preloader — entrance animation before page content */
     .preloader {
@@ -397,16 +397,26 @@
       function renderPopular() {
         var grid = document.getElementById('popularGrid');
         if (!grid || typeof Data === 'undefined') return;
-        var html = '';
+        // Собираем сервисы и сортируем по алфавиту (каталог A-Z, с учётом русской локали)
+        var items = [];
         for (var i = 0; i < POPULAR.length; i++) {
           var s = Data.getService(POPULAR[i]);
-          if (!s) continue;
+          if (s) items.push(s);
+        }
+        items.sort(function(a, b) {
+          return String(a.name).localeCompare(String(b.name), 'ru');
+        });
+        var html = '';
+        for (var j = 0; j < items.length; j++) {
+          var sv = items[j];
           html +=
-            '<div class="popular-card reveal-item" style="animation-delay:' + (i * 0.04) + 's" onclick="Order.pickPopular(\'' + s.id + '\')">' +
-              '<span class="popular-card__logo">' + getLogo(s.id) + '</span>' +
-              '<span class="popular-card__name">' + esc(s.name) + '</span>' +
-              '<span class="popular-card__price">' + fmtPrice(s.price) + '</span>' +
-              '<span class="popular-card__pick">Выбрать →</span>' +
+            '<div class="popular-card reveal-item" style="animation-delay:' + (j * 0.03) + 's" onclick="Order.pickPopular(\'' + sv.id + '\')">' +
+              '<span class="popular-card__logo">' + getLogo(sv.id) + '</span>' +
+              '<span class="popular-card__body">' +
+                '<span class="popular-card__name">' + esc(sv.name) + '</span>' +
+                '<span class="popular-card__price">' + fmtPrice(sv.price) + '</span>' +
+              '</span>' +
+              '<span class="popular-card__pick" aria-hidden="true">→</span>' +
             '</div>';
         }
         grid.innerHTML = html;
