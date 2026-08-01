@@ -647,6 +647,19 @@ app.post('/api/purchases/update', requireAuth, async (req, res) => {
   }
 });
 
+// Удалить заказ (админ) — для чистки ошибочных записей
+app.delete('/api/purchases/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.json({ error: 'Неверный ID' });
+    await db.run('DELETE FROM purchases WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete purchase error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ========================================================================
 //  Экспорт + запуск
 // ========================================================================
