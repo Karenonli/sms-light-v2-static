@@ -153,13 +153,27 @@
     return '<span class="logo-badge">' + short + '</span>';
   }
 
+  // Цена в выбранной валюте (window._currency ставит currency-switcher в index.html).
+  // Курс USD совпадает с index.html (RATE 0.011).
   function fmtHeroPrice(price) {
-    return price + ' ₽';
+    return window._currency === 'USD'
+      ? '$' + (price * 0.011).toFixed(2)
+      : price + ' ₽';
   }
 
   function esc(str) {
     var d = document.createElement('div');
     d.appendChild(document.createTextNode(str));
     return d.innerHTML;
+  }
+
+  // При смене валюты перерисовать открытый список, иначе цены останутся в старой валюте
+  var currencySelect = document.getElementById('currencySelect');
+  if (currencySelect) {
+    currencySelect.addEventListener('change', function() {
+      if (dropdown.classList.contains('open')) {
+        renderDropdown(searchInput.value.trim());
+      }
+    });
   }
 })();
