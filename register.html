@@ -119,31 +119,33 @@
       text-align: center;
     }
     .verify-box__icon {
-      width: 56px; height: 56px;
+      width: 44px; height: 44px;
       background: var(--green-subtle);
-      border-radius: 16px;
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 16px;
+      margin: 0 auto 10px;
       color: var(--green);
     }
+    .verify-box__icon svg { width: 22px; height: 22px; }
     .verify-box h2 {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--white);
       margin: 0 0 4px;
     }
     .verify-box p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--gray-400);
-      margin: 0 0 24px;
+      margin: 0 0 16px;
+      line-height: 1.5;
     }
 
     /* Code inputs */
     .code-inputs {
-      display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+      display: flex; gap: 6px; justify-content: center; margin-bottom: 14px;
     }
     .code-input {
-      width: 48px; height: 56px; text-align: center; font-size: 24px; font-weight: 700;
+      width: 44px; height: 46px; text-align: center; font-size: 21px; font-weight: 700;
       color: var(--gray-100);
       background: var(--bg);
       border: 2px solid var(--gray-700);
@@ -237,8 +239,8 @@
     }
     @media (max-width: 480px) {
       .reg-card { padding: 24px 18px; }
-      .code-inputs { gap: 6px; }
-      .code-input { width: 42px; height: 50px; font-size: 20px; }
+      .code-inputs { gap: 5px; }
+      .code-input { width: 40px; height: 44px; font-size: 19px; }
     }
   </style>
 </head>
@@ -362,7 +364,7 @@
           </div>
           <div class="form-error" id="verifyError" style="display:none"></div>
           <button class="btn btn--full" id="verifyBtn" disabled style="opacity:0.6;">Подтвердить</button>
-          <p style="font-size:13px;color:#6b7280;margin-top:16px;">
+          <p style="font-size:13px;color:#6b7280;margin-top:12px;">
             Не пришёл код?
             <a href="#" id="resendCode" style="color:#10b981;font-weight:600;text-decoration:none;">Отправить снова</a>
           </p>
