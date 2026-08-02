@@ -583,6 +583,84 @@ app.get('/api/admin/smtp-status', requireAdmin, async (req, res) => {
   }
 });
 
+// Статистика для админки: прогресс новых пользователей и активность.
+// Группировка по дням — в московском времени (Europe/Moscow), чтобы
+// «сегодня» у администратора совпадало с его календарным днём.
+// created_at в users — TIMESTAMP (UTC), в purchases/messages — TEXT ISO UTC.
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const TZ = 'Europe/Moscow';
+    const DAYS = 35;
+    // Граница «сейчас» как чистое UTC-время (независимо от session TimeZone Neon)
+    const nowUtc = "(NOW() AT TIME ZONE 'UTC')";
+
+    // Дневные серии (последние DAYS дней)
+    const usersDailyRaw = await db.all(
+      `SELECT to_char((created_at AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS count
+       FROM users WHERE created_at >= ${nowUtc} - INTERVAL '${DAYS} days'
+       GROUP BY 1 ORDER BY 1`
+    );
+    const purchasesDailyRaw = await db.all(
+      `SELECT to_char((created_at::timestamptz AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS count
+       FROM purchases
+       WHERE created_at IS NOT NULL AND created_at <> ''
+         AND created_at::timestamptz >= NOW() - INTERVAL '${DAYS} days'
+       GROUP BY 1 ORDER BY 1`
+    );
+    const messagesDailyRaw = await db.all(
+      `SELECT to_char((created_at::timestamptz AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS count
+       FROM messages
+       WHERE created_at IS NOT NULL AND created_at <> ''
+         AND created_at::timestamptz >= NOW() - INTERVAL '${DAYS} days'
+       GROUP BY 1 ORDER BY 1`
+    );
+
+    // Агрегаты за периоды
+    const rows = await Promise.all([
+      db.get('SELECT COUNT(*)::int AS c FROM users'),
+      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '1 day'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '7 days'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '30 days'`),
+      db.get('SELECT COUNT(*)::int AS c FROM purchases'),
+      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '1 day'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '30 days'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '1 day'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
+      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '30 days'`),
+    ]);
+
+    const topServices = await db.all(
+      `SELECT service_name AS name, COUNT(*)::int AS count FROM purchases
+       GROUP BY service_name ORDER BY count DESC, name ASC LIMIT 8`
+    );
+    const recent = await db.all(
+      `SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 8`
+    );
+
+    const n = function(row) { return row ? row.c : 0; };
+    res.json({
+      ok: true,
+      totals: {
+        users: n(rows[0]), usersToday: n(rows[1]), usersWeek: n(rows[2]), usersMonth: n(rows[3]),
+        purchases: n(rows[4]), purchasesToday: n(rows[5]), purchasesWeek: n(rows[6]), purchasesMonth: n(rows[7]),
+        messagesToday: n(rows[8]), messagesWeek: n(rows[9]), messagesMonth: n(rows[10]),
+      },
+      usersDaily: usersDailyRaw,
+      purchasesDaily: purchasesDailyRaw,
+      messagesDaily: messagesDailyRaw,
+      topServices,
+      recent,
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err.message);
+    res.json({ error: 'Ошибка загрузки статистики' });
+  }
+});
+
 // ========================================================================
 //  API: Сообщения чата
 // ========================================================================

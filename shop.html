@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=13">
+  <link rel="stylesheet" href="css/style.css?v=14">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     /* Preloader — entrance animation before page content (как на сайте) */
@@ -51,6 +51,38 @@
       font-size: 13px;
       color: var(--gray-500, #666);
       animation: fadeIn 0.6s ease 0.6s both;
+    }
+    .preloader__bubbles {
+      display: flex; gap: 9px; margin-bottom: 20px;
+    }
+    .preloader__bubbles i {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--green-500, #10b981);
+      opacity: .2;
+      animation: prebubble 1.2s ease-in-out infinite;
+    }
+    .preloader__bubbles i:nth-child(2) { animation-delay: .15s; }
+    .preloader__bubbles i:nth-child(3) { animation-delay: .3s; }
+    @keyframes prebubble {
+      0%, 100% { opacity: .15; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-7px); }
+    }
+    .preloader__title {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--white, #ffffff);
+      animation: fadeIn 0.6s ease 0.15s both;
+    }
+    .preloader__desc {
+      margin-top: 8px;
+      max-width: 380px;
+      text-align: center;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--gray-400, #8a8a8a);
+      animation: fadeIn 0.6s ease 0.3s both;
     }
     @keyframes prelogo {
       0% { opacity: 0; transform: translateY(8px); }
@@ -144,9 +176,12 @@
 
   <!-- Preloader -->
   <div class="preloader" id="preloader">
+    <div class="preloader__bubbles"><i></i><i></i><i></i></div>
     <div class="preloader__logo">
       SMS<span class="green">Light</span>
     </div>
+    <div class="preloader__title">Виртуальные номера — моментально</div>
+    <div class="preloader__desc">Регистрация в Telegram, WhatsApp и ещё 200+ сервисах. Быстро, анонимно, безопасно.</div>
     <div class="preloader__bar"></div>
     <div class="preloader__hint">Загружаем лучшие номера...</div>
   </div>
@@ -157,9 +192,10 @@
         preloader.classList.add('preloader--hide');
         setTimeout(function() { preloader.style.display = 'none'; }, 600);
       }
+      // Hide after animation plays, or immediately if too late
       var elapsed = performance.now();
-      if (elapsed > 2000) { hidePreloader(); }
-      else { setTimeout(hidePreloader, Math.max(600, 1800 - elapsed)); }
+      if (elapsed > 2600) { hidePreloader(); }
+      else { setTimeout(hidePreloader, Math.max(900, 2500 - elapsed)); }
     })();
   </script>
 
@@ -275,6 +311,13 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Brand banner: designer picture with store name -->
+  <section class="banner reveal">
+    <div class="container">
+      <img class="banner__img" src="img/sms-light-banner.svg?v=1" alt="SMS Light — виртуальные номера для Telegram, WhatsApp и 200+ сервисов" loading="lazy">
     </div>
   </section>
 

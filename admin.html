@@ -1099,6 +1099,157 @@
 
     .spinner { border-color: var(--gray-800); border-top-color: var(--green-500); }
     [data-theme="light"] .spinner { border-color: var(--gray-700); border-top-color: var(--green-600); }
+
+    /* ==========================================================
+       Статистика: чарты, топ сервисов, последние регистрации
+       ========================================================== */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .chart-card { padding: 20px; }
+
+    .chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 150px;
+      margin-top: 20px;
+      position: relative;
+    }
+    .chart::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 22px;
+      border-bottom: 1px dashed var(--gray-750);
+    }
+    .chart__col {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .chart__bar {
+      width: 100%;
+      max-width: 24px;
+      min-height: 2px;
+      border-radius: 5px 5px 2px 2px;
+      background: linear-gradient(180deg, var(--green-400), var(--green-600));
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.28);
+      transition: filter 0.15s ease;
+    }
+    .chart__col:hover .chart__bar { filter: brightness(1.2); }
+    .chart__group {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      width: 100%;
+      max-width: 24px;
+      justify-content: center;
+    }
+    .chart__group .chart__bar { max-width: 10px; }
+    .chart__bar--m {
+      background: linear-gradient(180deg, #38bdf8, #2563eb);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.28);
+    }
+    .chart__tip {
+      position: absolute;
+      bottom: calc(100% - 2px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      background: var(--gray-850);
+      border: 1px solid var(--ring-green);
+      color: var(--gray-100);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+      z-index: 3;
+    }
+    .chart__col:hover .chart__tip { opacity: 1; }
+    .chart__label {
+      margin-top: 6px;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--gray-500);
+      white-space: nowrap;
+      transform: rotate(-45deg) translateY(-2px);
+      transform-origin: top left;
+    }
+    [data-theme="light"] .chart__label { color: var(--gray-400); }
+    .chart__legend {
+      margin-left: 10px;
+      font-weight: 500;
+    }
+    .chart__dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin: 0 4px 0 8px;
+      vertical-align: middle;
+    }
+    .chart__dot--p { background: var(--green-500); box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+    .chart__dot--m { background: #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
+
+    /* Топ сервисов / последние регистрации */
+    .stats-list { display: flex; flex-direction: column; gap: 11px; margin-top: 18px; }
+    .stats-list__row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .stats-list__name {
+      width: 92px;
+      color: var(--gray-200);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stats-list__track {
+      flex: 1;
+      height: 8px;
+      background: var(--surface-3);
+      border: 1px solid var(--card-border);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .stats-list__fill {
+      height: 100%;
+      border-radius: 5px;
+      background: linear-gradient(90deg, var(--green-500), var(--green-400));
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+      transition: width 0.5s ease;
+    }
+    .stats-list__count {
+      min-width: 30px;
+      text-align: right;
+      font-weight: 700;
+      color: var(--green-text);
+    }
+    .stats-user__main { flex: 1; min-width: 0; line-height: 1.35; }
+    .stats-user__name { color: var(--gray-100); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stats-user__email { color: var(--gray-500); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stats-user__date { color: var(--gray-500); font-size: 11.5px; white-space: nowrap; }
+    [data-theme="light"] .stats-user__name { color: #222; }
+
+    @media (max-width: 820px) {
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .chart-card { padding: 14px; }
+      .chart { height: 120px; }
+    }
     .smtp-spinner {
       width: 14px;
       height: 14px;
@@ -1156,15 +1307,93 @@
 
         <!-- Tabs -->
         <div class="admin-tabs">
-          <button class="admin-tab active" data-section="users">Пользователи</button>
+          <button class="admin-tab active" data-section="stats">Статистика</button>
+          <button class="admin-tab" data-section="users">Пользователи</button>
           <button class="admin-tab" data-section="tickets">Заявки <span id="ticketBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:0 8px;font-size:11px;margin-left:4px"></span></button>
           <button class="admin-tab" data-section="purchases">Покупки</button>
           <button class="admin-tab" data-section="chats">Чаты <span id="chatBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:0 8px;font-size:11px;margin-left:4px"></span></button>
 	          <button class="admin-tab" data-section="email">Email</button>
         </div>
 
+        <!-- Section: Stats (прогресс новых пользователей и активность) -->
+        <div class="admin-section active" id="section-stats">
+          <!-- Агрегаты -->
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-card__label">Новых за сегодня</div>
+              <div class="stat-card__value" id="stUsersToday">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Новых за 7 дней</div>
+              <div class="stat-card__value" id="stUsersWeek">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Новых за 30 дней</div>
+              <div class="stat-card__value" id="stUsersMonth">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Всего пользователей</div>
+              <div class="stat-card__value" id="stUsersTotal">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Заказов за 30 дней</div>
+              <div class="stat-card__value" id="stPurchasesMonth">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Сообщений за 30 дней</div>
+              <div class="stat-card__value" id="stMessagesMonth">—</div>
+            </div>
+          </div>
+
+          <!-- Чарты: новые пользователи + активность -->
+          <div class="chart-grid">
+            <div class="smtp-card chart-card">
+              <div class="smtp-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Новые пользователи
+              </div>
+              <div class="smtp-card__desc">Регистрации по дням · последние 14 дней</div>
+              <div class="chart chart--users" id="chartUsers"><div class="loading"><div class="spinner"></div></div></div>
+            </div>
+            <div class="smtp-card chart-card">
+              <div class="smtp-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Активность
+              </div>
+              <div class="smtp-card__desc">
+                Заказы и сообщения по дням · последние 14 дней
+                <span class="chart__legend">
+                  <span class="chart__dot chart__dot--p"></span> Заказы
+                  <span class="chart__dot chart__dot--m"></span> Сообщения
+                </span>
+              </div>
+              <div class="chart chart--activity" id="chartActivity"><div class="loading"><div class="spinner"></div></div></div>
+            </div>
+          </div>
+
+          <!-- Топ сервисов + последние регистрации -->
+          <div class="chart-grid">
+            <div class="smtp-card chart-card">
+              <div class="smtp-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                Топ сервисов
+              </div>
+              <div class="smtp-card__desc">Самые покупаемые услуги</div>
+              <div class="stats-list" id="statsTopServices"></div>
+            </div>
+            <div class="smtp-card chart-card">
+              <div class="smtp-card__title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Последние регистрации
+              </div>
+              <div class="smtp-card__desc">Новые аккаунты на сайте</div>
+              <div class="stats-list" id="statsRecent"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Section: Users -->
-        <div class="admin-section active" id="section-users">
+        <div class="admin-section" id="section-users">
           <!-- Stats -->
           <div class="stats">
             <div class="stat-card">
@@ -1368,6 +1597,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
         document.getElementById('logoutBtn').style.display = 'inline-flex';
         Auth.applyTheme();
         ChatServer.startSync();       // ← синхронизация чата с сервером
+        loadStats();
         loadUsers();
         loadTickets();
         loadPurchases();
@@ -1392,6 +1622,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
           this.classList.add('active');
           document.querySelectorAll('.admin-section').forEach(function(s) { s.classList.remove('active'); });
           document.getElementById('section-' + this.dataset.section).classList.add('active');
+          if (this.dataset.section === 'stats') loadStats();
           if (this.dataset.section === 'chats') loadChats();
           if (this.dataset.section === 'email') loadEmailStatus();
         });
@@ -2125,7 +2356,157 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
 	      });
 	    }
 
-	    // ====================== Logout ======================
+	    // ====================== Stats (прогресс пользователей и активность) ======================
+    function dayKey(d) {
+      // Московский календарный день в формате YYYY-MM-DD (как на сервере)
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).format(d);
+    }
+    function shortLabel(d) { return d.getDate() + '.' + (d.getMonth() + 1); }
+
+    function lastDays(n) {
+      var arr = [];
+      var now = new Date();
+      for (var i = n - 1; i >= 0; i--) arr.push(new Date(now.getTime() - i * 86400000));
+      return arr;
+    }
+    function mergeDaily(raw, days) {
+      var map = {};
+      for (var i = 0; i < raw.length; i++) map[raw[i].day] = raw[i].count;
+      return days.map(function(d) {
+        return { day: dayKey(d), date: d, label: shortLabel(d), count: map[dayKey(d)] || 0 };
+      });
+    }
+    function renderBarChart(el, data) {
+      if (!el) return;
+      var max = 1;
+      for (var i = 0; i < data.length; i++) if (data[i].count > max) max = data[i].count;
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var d = data[i];
+        var h = Math.max(3, Math.round(d.count / max * 100));
+        var lbl = (i % 2 === 0) ? '<div class="chart__label">' + d.label + '</div>' : '';
+        html += '<div class="chart__col">'
+          + '<div class="chart__tip">' + d.label + ' · ' + d.count + '</div>'
+          + '<div class="chart__bar" style="height:' + h + '%"></div>'
+          + lbl
+          + '</div>';
+      }
+      el.innerHTML = html;
+    }
+    function renderGroupedChart(el, pData, mData) {
+      if (!el) return;
+      var max = 1;
+      for (var i = 0; i < pData.length; i++) {
+        if (pData[i].count > max) max = pData[i].count;
+        if (mData[i].count > max) max = mData[i].count;
+      }
+      var html = '';
+      for (var i = 0; i < pData.length; i++) {
+        var d = pData[i];
+        var hp = Math.max(2, Math.round(pData[i].count / max * 100));
+        var hm = Math.max(2, Math.round(mData[i].count / max * 100));
+        var lbl = (i % 2 === 0) ? '<div class="chart__label">' + d.label + '</div>' : '';
+        html += '<div class="chart__col">'
+          + '<div class="chart__tip">' + d.label + ' · заказов ' + pData[i].count + ', сообщений ' + mData[i].count + '</div>'
+          + '<div class="chart__group">'
+          + '<div class="chart__bar chart__bar--p" style="height:' + hp + '%"></div>'
+          + '<div class="chart__bar chart__bar--m" style="height:' + hm + '%"></div>'
+          + '</div>'
+          + lbl
+          + '</div>';
+      }
+      el.innerHTML = html;
+    }
+    function renderTopServices(list) {
+      var el = document.getElementById('statsTopServices');
+      if (!el) return;
+      if (!list || list.length === 0) {
+        el.innerHTML = '<div class="empty-state" style="padding:24px 0"><span class="empty-state__text">Заказов пока нет</span></div>';
+        return;
+      }
+      var max = 1;
+      for (var i = 0; i < list.length; i++) if (list[i].count > max) max = list[i].count;
+      var html = '';
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        var w = Math.max(4, Math.round(s.count / max * 100));
+        html += '<div class="stats-list__row">'
+          + '<span class="stats-list__name">' + esc(s.name) + '</span>'
+          + '<div class="stats-list__track"><div class="stats-list__fill" style="width:' + w + '%"></div></div>'
+          + '<span class="stats-list__count">' + s.count + '</span>'
+          + '</div>';
+      }
+      el.innerHTML = html;
+    }
+    function renderRecent(list) {
+      var el = document.getElementById('statsRecent');
+      if (!el) return;
+      if (!list || list.length === 0) {
+        el.innerHTML = '<div class="empty-state" style="padding:24px 0"><span class="empty-state__text">Регистраций пока нет</span></div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < list.length; i++) {
+        var u = list[i];
+        var initial = (u.name || '?')[0].toUpperCase();
+        var d = u.created_at ? new Date(u.created_at) : null;
+        var dateStr = d && !isNaN(d.getTime())
+          ? d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+          : '';
+        html += '<div class="stats-list__row">'
+          + '<div class="user-avatar" style="width:26px;height:26px;font-size:11px">' + initial + '</div>'
+          + '<div class="stats-user__main">'
+          + '<div class="stats-user__name">' + esc(u.name) + '</div>'
+          + '<div class="stats-user__email">' + esc(u.email) + '</div>'
+          + '</div>'
+          + '<span class="stats-user__date">' + dateStr + '</span>'
+          + '</div>';
+      }
+      el.innerHTML = html;
+    }
+    function renderStats(d) {
+      var t = d.totals || {};
+      function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+      set('stUsersToday', t.usersToday);
+      set('stUsersWeek', t.usersWeek);
+      set('stUsersMonth', t.usersMonth);
+      set('stUsersTotal', t.users);
+      set('stPurchasesMonth', t.purchasesMonth);
+      set('stMessagesMonth', t.messagesMonth);
+
+      var days = lastDays(14);
+      renderBarChart(document.getElementById('chartUsers'), mergeDaily(d.usersDaily || [], days));
+      renderGroupedChart(
+        document.getElementById('chartActivity'),
+        mergeDaily(d.purchasesDaily || [], days),
+        mergeDaily(d.messagesDaily || [], days)
+      );
+      renderTopServices(d.topServices || []);
+      renderRecent(d.recent || []);
+    }
+    function showStatsError() {
+      ['chartUsers', 'chartActivity'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="empty-state" style="padding:36px 0"><span class="empty-state__text">Не удалось загрузить статистику</span></div>';
+      });
+      ['stUsersToday', 'stUsersWeek', 'stUsersMonth', 'stUsersTotal', 'stPurchasesMonth', 'stMessagesMonth'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+    }
+    function loadStats() {
+      fetch('/api/admin/stats')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d || d.error) { showStatsError(); return; }
+          renderStats(d);
+        })
+        .catch(function() { showStatsError(); });
+    }
+
+    // ====================== Logout ======================
     document.getElementById('logoutBtn').addEventListener('click', function() {
       Auth.logout();
     });
