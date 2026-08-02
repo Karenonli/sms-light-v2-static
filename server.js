@@ -586,15 +586,21 @@ app.post('/api/purchases', requireAuth, async (req, res) => {
       [purId, req.session.userId, serviceType || 'virtual', serviceName, country || '', price || 0, currency || 'RUB', created_at || new Date().toISOString()]
     );
 
-    // Telegram-уведомление администратору о новом заказе (если задан ADMIN_TG_CHAT_ID)
+    // Telegram-уведомление администратору о новом заказе (если задан ADMIN_TG_CHAT_ID).
+    // Await обязателен: на Vercel после res.json() функция замораживается, и
+    // фоновая отправка не успела бы уйти. Ошибка уведомления не роняет заказ.
     if (process.env.ADMIN_TG_CHAT_ID) {
-      tgBot.notifyAdmin(
-        '🛍️ Новый заказ №' + purId + '\n'
-        + 'Сервис: ' + serviceName + '\n'
-        + 'Страна: ' + (country || '—') + '\n'
-        + 'Цена: ' + (price || 0) + ' ' + (currency || 'RUB') + '\n'
-        + 'Статус: ' + tgBot.statusText('pending')
-      ).catch(function() {});
+      try {
+        await tgBot.notifyAdmin(
+          '🛍️ Новый заказ №' + purId + '\n'
+          + 'Сервис: ' + serviceName + '\n'
+          + 'Страна: ' + (country || '—') + '\n'
+          + 'Цена: ' + (price || 0) + ' ' + (currency || 'RUB') + '\n'
+          + 'Статус: ' + tgBot.statusText('pending')
+        );
+      } catch (err) {
+        console.error('TG notifyAdmin error:', err);
+      }
     }
 
     res.json({ ok: true, id: purId });
