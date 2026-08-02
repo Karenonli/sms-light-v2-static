@@ -121,7 +121,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ error: 'Имя должно быть минимум 2 символа' });
     }
 
-    const existing = await db.get('SELECT id, email_verified FROM users WHERE email = $1', [email]);
+    const existing = await db.get('SELECT id, email_verified FROM users WHERE LOWER(email) = LOWER($1)', [email]);
     if (existing) {
       // Email подтверждён — это дубликат, пусть войдёт.
       if (existing.email_verified) {
@@ -250,7 +250,7 @@ app.post('/api/auth/register-username', async (req, res) => {
     if (taken) return res.json({ error: 'Этот username уже занят. Выберите другой.' });
 
     if (emailClean) {
-      const clash = await db.get('SELECT id FROM users WHERE email = $1', [emailClean]);
+      const clash = await db.get('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [emailClean]);
       if (clash) return res.json({ error: 'Этот email уже зарегистрирован. Войдите через него.' });
     }
 
@@ -349,7 +349,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.json({ error: 'Введите логин и пароль' });
     }
 
-    const user = await db.get('SELECT * FROM users WHERE email = $1 OR LOWER(nickname) = LOWER($1)', [login]);
+    const user = await db.get('SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [login]);
     if (!user) {
       return res.json({ error: 'Неверный логин или пароль' });
     }
@@ -426,7 +426,10 @@ app.post('/api/auth/forgot', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.json({ error: 'Введите email' });
 
-    const user = await db.get('SELECT id, email_verified FROM users WHERE email = $1', [email]);
+    // Ищем и по email, и по username (регистрация по username): LOWER делает
+    // поиск нечувствительным к регистру. Код восстановления уходит на email
+    // аккаунта — даже если пользователь ввёл свой username.
+    const user = await db.get('SELECT id, email FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
     if (!user) {
       return res.json({ ok: true, message: 'Если аккаунт существует, код отправлен на email' });
     }
@@ -437,8 +440,8 @@ app.post('/api/auth/forgot', async (req, res) => {
     await db.run('UPDATE users SET reset_code = $1, reset_code_expires = $2 WHERE id = $3', [code, expires, user.id]);
 
     try {
-      await sendEmail(email, 'Восстановление пароля — SMS Light', templates.reset(code));
-      console.log(`→ Код восстановления для ${email}: ${code}`);
+      await sendEmail(user.email, 'Восстановление пароля — SMS Light', templates.reset(code));
+      console.log(`→ Код восстановления для ${email} (email: ${user.email}): ${code}`);
       res.json({
         ok: true,
         message: 'Код восстановления отправлен на ваш email. Проверьте также папку «Спам».',
@@ -478,7 +481,7 @@ app.post('/api/auth/reset', async (req, res) => {
       return res.json({ error: 'Пароль должен быть минимум 6 символов' });
     }
 
-    const user = await db.get('SELECT id, reset_code, reset_code_expires FROM users WHERE email = $1', [email]);
+    const user = await db.get('SELECT id, reset_code, reset_code_expires FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
     if (!user) return res.json({ error: 'Пользователь не найден' });
     if (!user.reset_code) return res.json({ error: 'Код не был запрошен' });
     if (user.reset_code !== code) return res.json({ error: 'Неверный код восстановления' });
