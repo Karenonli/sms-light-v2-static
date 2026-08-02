@@ -2581,14 +2581,14 @@ input, button, select, textarea { font-family: inherit; }
   justify-content: center;
   width: 34px; height: 34px;
   border-radius: 8px;
-  color: #2aabee;
+  color: var(--green-500);
   transition: var(--transition);
   line-height: 1;
   text-decoration: none;
 }
 .telegram-btn:hover {
   background: var(--gray-800);
-  color: #6ec9ff;
+  color: var(--green-400);
 }
 .telegram-btn svg { width: 17px; height: 17px; }
 
