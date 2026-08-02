@@ -856,18 +856,21 @@ app.post('/api/tg/auth', async (req, res) => {
     if (!v.ok) return res.status(401).json({ error: v.error });
 
     const tgUser = v.user || {};
+    const tgId = tgUser.id;
     const email = tgBot.emailForTgUser(tgUser);
     const name = ((tgUser.first_name || '') + (tgUser.last_name ? ' ' + tgUser.last_name : '')).trim() || 'Telegram';
     const nickname = tgUser.username || '';
 
-    let user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+    // Ищем и по tg_id, и по детерминированному email: tg_id неизменен при смене
+    // username, поэтому аккаунт одного и того же человека не задваивается.
+    let user = await db.get('SELECT * FROM users WHERE tg_id = $1 OR email = $2', [tgId, email]);
     if (!user) {
       // Пароль пустой — вход только через Telegram (подпись initData уже проверена)
       await db.run(
-        "INSERT INTO users (email, name, nickname, password, email_verified, is_admin, created_at) VALUES ($1, $2, $3, '', 1, 0, $4)",
-        [email, name, nickname, new Date().toISOString()]
+        "INSERT INTO users (email, name, nickname, password, email_verified, is_admin, tg_id, created_at) VALUES ($1, $2, $3, '', 1, 0, $4, $5)",
+        [email, name, nickname, tgId, new Date().toISOString()]
       );
-      user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+      user = await db.get('SELECT * FROM users WHERE tg_id = $1', [tgId]);
 
       // Telegram-уведомление админу о новом посетителе мини-маркета (только при создании).
       if (process.env.ADMIN_TG_CHAT_ID) {
@@ -882,7 +885,7 @@ app.post('/api/tg/auth', async (req, res) => {
         }
       }
     } else {
-      await db.run('UPDATE users SET name = $1, nickname = $2 WHERE id = $3', [name, nickname, user.id]);
+      await db.run('UPDATE users SET name = $1, nickname = $2, tg_id = $3 WHERE id = $4', [name, nickname, tgId, user.id]);
     }
 
     req.session.userId = user.id;
@@ -901,6 +904,120 @@ app.post('/api/tg/auth', async (req, res) => {
     });
   } catch (err) {
     console.error('TG auth error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ===== Регистрация через Telegram Login Widget =====
+// Пользователь выбирает «Через Telegram»: виджет присылает authResult, мы сохраняем
+// его неизменяемый Telegram ID (tg_id) и пароль — аккаунт переживает смену @username.
+// Email необязателен и вводится БЕЗ подтверждения кодом: он нужен только для
+// восстановления через «Забыли пароль?».
+app.post('/api/auth/tg-register', async (req, res) => {
+  try {
+    const { authResult, password, email } = req.body || {};
+    const v = tgBot.validateLoginWidget(authResult);
+    if (!v.ok) return res.json({ error: v.error });
+    const tgUser = v.user;
+    const tgId = tgUser.id;
+
+    if (!password || String(password).length < 6) {
+      return res.json({ error: 'Пароль должен быть минимум 6 символов' });
+    }
+    const emailClean = String(email || '').trim().toLowerCase();
+    if (emailClean && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+      return res.json({ error: 'Введите корректный email' });
+    }
+
+    const fallbackEmail = tgBot.emailForTgUser({ id: tgId });
+    const hash = await bcrypt.hash(password, 10);
+
+    let user = await db.get('SELECT id, email, password, name, is_admin FROM users WHERE tg_id = $1', [tgId]);
+    if (!user) user = await db.get('SELECT id, email, password, name, is_admin FROM users WHERE email = $1', [fallbackEmail]);
+
+    // Уже полноценный аккаунт (с паролем) — пусть входит через «Войти через Telegram».
+    if (user && user.password) {
+      return res.json({ error: 'Этот Telegram уже зарегистрирован. Войдите через «Войти через Telegram».' });
+    }
+
+    // Email занят другим аккаунтом — привязывать нельзя.
+    if (emailClean) {
+      const clash = await db.get('SELECT id FROM users WHERE email = $1 AND id <> $2', [emailClean, user ? user.id : -1]);
+      if (clash) return res.json({ error: 'Этот email уже зарегистрирован. Войдите через него.' });
+    }
+
+    let saved;
+    if (user) {
+      // Доводим до конца регистрацию посетителя мини-маркета (был tg<id>@telegram.local без пароля).
+      await db.run(
+        'UPDATE users SET tg_id = $1, password = $2, email = COALESCE(NULLIF($3, \'\'), email), email_verified = 1 WHERE id = $4',
+        [tgId, hash, emailClean, user.id]
+      );
+      saved = await db.get('SELECT id, name, email, is_admin FROM users WHERE id = $1', [user.id]);
+    } else {
+      const name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ').trim() || ('Telegram ' + tgId);
+      const nickname = tgUser.username || '';
+      const insertEmail = emailClean || fallbackEmail;
+      await db.run(
+        'INSERT INTO users (name, nickname, email, password, is_admin, email_verified, tg_id, created_at) VALUES ($1, $2, $3, $4, 0, 1, $5, $6)',
+        [name, nickname, insertEmail, hash, tgId, new Date().toISOString()]
+      );
+      saved = await db.get('SELECT id, name, email, is_admin FROM users WHERE tg_id = $1', [tgId]);
+
+      // Telegram-уведомление админу о новой регистрации. Await обязателен (Vercel).
+      if (process.env.ADMIN_TG_CHAT_ID) {
+        try {
+          await tgBot.notifyAdmin(
+            '👤 Новый пользователь (Telegram-регистрация)\nИмя: ' + name
+            + (nickname ? '\nUsername: @' + nickname : '')
+            + (emailClean ? '\nEmail: ' + emailClean : ''),
+            tgAdminKeyboard()
+          );
+        } catch (err) {
+          console.error('TG notifyAdmin (tg-register) error:', err);
+        }
+      }
+    }
+
+    req.session.userId = saved.id;
+    req.session.isAdmin = saved.is_admin === 1;
+    await saveSession(req);
+
+    res.json({
+      ok: true,
+      registered: true,
+      user: { id: saved.id, name: saved.name, email: saved.email, is_admin: !!saved.is_admin },
+    });
+  } catch (err) {
+    console.error('TG register error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Вход через Telegram Login Widget
+app.post('/api/auth/tg-login', async (req, res) => {
+  try {
+    const { authResult } = req.body || {};
+    const v = tgBot.validateLoginWidget(authResult);
+    if (!v.ok) return res.json({ error: v.error });
+    const tgUser = v.user;
+    const tgId = tgUser.id;
+
+    const user = await db.get(
+      'SELECT id, name, email, is_admin, email_verified FROM users WHERE tg_id = $1 OR email = $2',
+      [tgId, tgBot.emailForTgUser({ id: tgId })]
+    );
+    if (!user) {
+      return res.json({ error: 'Аккаунт не найден. Сначала зарегистрируйтесь через Telegram.', not_found: true });
+    }
+
+    req.session.userId = user.id;
+    req.session.isAdmin = user.is_admin === 1;
+    await saveSession(req);
+
+    res.json({ ok: true, is_admin: user.is_admin === 1, user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin } });
+  } catch (err) {
+    console.error('TG login error:', err);
     res.json({ error: 'Ошибка сервера' });
   }
 });
