@@ -786,19 +786,22 @@ app.delete('/api/reviews/:id', requireAdmin, async (req, res) => {
 //  API: Telegram-бот (мини-маркет)
 // ========================================================================
 
-// Вебхук Telegram. Сначала отвечаем 200 (Telegram ретраит только на не-200),
-// затем обрабатываем апдейт в фоне.
+// Вебхук Telegram. ВАЖНО: апдейт обрабатываем ДО ответа. На Vercel после
+// res.end() функция «замораживается», и фоновый ответ бота не успел бы уйти —
+// Telegram получал 200, снимал апдейт, но sendMessage так и не отправлялся.
 app.post('/api/tg/webhook', async (req, res) => {
-  res.status(200).end();
-
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (secret && req.get('X-Telegram-Bot-Api-Secret-Token') !== secret) {
     console.error('TG webhook: неверный secret token');
+    res.status(200).end();
     return;
   }
-  tgBot.handleUpdate(req.body).catch(function(err) {
+  try {
+    await tgBot.handleUpdate(req.body);
+  } catch (err) {
     console.error('TG handleUpdate error:', err);
-  });
+  }
+  res.status(200).end();
 });
 
 // Вход из Telegram Mini App: по подписанному initData создаём/входим
