@@ -5,7 +5,8 @@
     { "source": "/login", "destination": "/login.html" },
     { "source": "/register", "destination": "/register.html" },
     { "source": "/forgot", "destination": "/forgot-password.html" },
-    { "source": "/admin", "destination": "/admin.html" }
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/shop", "destination": "/shop.html" }
   ],
   "functions": {
     "api/index.js": {

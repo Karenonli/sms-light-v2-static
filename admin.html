@@ -1319,6 +1319,29 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
             </div>
           </div>
 
+          <!-- Telegram Bot (мини-маркет) -->
+          <div class="smtp-card">
+            <div class="smtp-card__title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg> Telegram-бот (мини-маркет)</div>
+            <div class="smtp-card__desc">Виртуальные номера в Telegram: кнопка «Открыть мини-маркет» в чате с ботом</div>
+            <div class="smtp-status" id="tgStatus">
+              <span id="tgStatusIcon"></span>
+              <span id="tgStatusText">Проверка...</span>
+            </div>
+            <div id="tgStatusDetail" style="font-size:12.5px;color:#9ca3af;line-height:1.7;margin-bottom:12px;display:none;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <button class="btn btn--sm" id="tgRegisterWebhookBtn" onclick="registerTgWebhook()">🔗 Зарегистрировать вебхук</button>
+              <button class="btn btn--outline btn--sm" id="tgTestNotifyBtn" onclick="tgTestNotify()">Тест-уведомление</button>
+            </div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.7;">
+              <p>Чтобы бот заработал, задайте на Vercel (<code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;">vercel env add TELEGRAM_BOT_TOKEN</code>) и передеплойте:</p>
+              <p style="margin-top:6px;">
+                <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">TELEGRAM_BOT_TOKEN</code> — токен бота от <b>@BotFather</b><br>
+                <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">ADMIN_TG_CHAT_ID</code> — id чата для уведомлений о заказах (бот подскажет его в <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">/start</code>)<br>
+                <code style="background:#0f0f0f;padding:2px 8px;border-radius:4px;font-size:12px;">TELEGRAM_WEBHOOK_SECRET</code> — секрет вебхука (по желанию)
+              </p>
+            </div>
+          </div>
+
         </div>
 
 	      </div>
@@ -1352,6 +1375,7 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
         initTabs();
         startChatPoll();
         initNotifications();
+        loadTgStatus();
       } else if (session) {
         document.getElementById('loginPrompt').style.display = 'block';
         document.querySelector('.login-prompt__text').textContent = 'У вас нет прав администратора';
@@ -1983,6 +2007,86 @@ SMTP_FROM="SMS Light" &lt;your@mail.ru&gt;
 
 	    function checkSmtpStatus() {
 	      loadEmailStatus();
+	    }
+
+	    // ====================== Telegram-бот ======================
+	    function loadTgStatus() {
+	      var iconEl = document.getElementById('tgStatusIcon');
+	      var textEl = document.getElementById('tgStatusText');
+	      var detailEl = document.getElementById('tgStatusDetail');
+	      if (!iconEl || !textEl) return;
+	      iconEl.textContent = '⏳';
+	      textEl.textContent = 'Проверка...';
+	      textEl.style.color = '';
+
+	      fetch('/api/tg/status')
+	        .then(function(r) { return r.json(); })
+	        .then(function(data) {
+	          if (!data || !data.ok) {
+	            iconEl.textContent = '⚠️';
+	            textEl.textContent = (data && data.error) || 'Бот не настроен';
+	            textEl.style.color = '#f87171';
+	            detailEl.style.display = 'none';
+	            return;
+	          }
+	          if (data.bot && data.bot.is_bot) {
+	            iconEl.textContent = '🤖';
+	            textEl.textContent = '@' + data.bot.username + ' — активен';
+	            textEl.style.color = '#34d399';
+	            detailEl.innerHTML =
+	              'Вебхук: ' + (data.webhook && data.webhook.url
+	                ? '<a href="' + data.webhook.url + '" target="_blank" style="color:#10b981;">' + data.webhook.url + '</a>'
+	                : '<span style="color:#f87171;">не зарегистрирован</span>') +
+	              '<br>Уведомления админу: ' + (data.adminChatSet
+	                ? '<span style="color:#34d399;">включены</span> (id ' + data.adminChatId + ')'
+	                : '<span style="color:#eab308;">выключены</span> — задайте ADMIN_TG_CHAT_ID') +
+	              '<br>Ожидают обновлений: ' + (data.webhook ? data.webhook.pendingUpdateCount : '—') +
+	              (data.webhook && data.webhook.lastError
+	                ? '<br><span style="color:#f87171;">Ошибка вебхука: ' + data.webhook.lastError + '</span>'
+	                : '');
+	            detailEl.style.display = 'block';
+	          } else {
+	            iconEl.textContent = '⚠️';
+	            textEl.textContent = data.botError || 'Бот не отвечает';
+	            textEl.style.color = '#f87171';
+	            detailEl.style.display = 'none';
+	          }
+	        })
+	        .catch(function() {
+	          iconEl.textContent = '⚠️';
+	          textEl.textContent = 'Ошибка запроса';
+	          textEl.style.color = '#f87171';
+	          detailEl.style.display = 'none';
+	        });
+	    }
+
+	    function registerTgWebhook() {
+	      var btn = document.getElementById('tgRegisterWebhookBtn');
+	      if (!btn) return;
+	      btn.disabled = true;
+	      btn.textContent = 'Регистрация...';
+	      fetch('/api/tg/register-webhook', { method: 'POST' })
+	        .then(function(r) { return r.json(); })
+	        .then(function(data) {
+	          if (data.ok) { showToast('🤖', 'Вебхук зарегистрирован', 'Бот готов принимать /start и кнопку мини-маркета'); }
+	          else showToast('⚠️', 'Ошибка', data.error || 'Не удалось зарегистрировать вебхук');
+	          loadTgStatus();
+	        })
+	        .catch(function() { showToast('⚠️', 'Ошибка сети', 'Проверьте подключение'); })
+	        .finally(function() {
+	          btn.disabled = false;
+	          btn.textContent = '🔗 Зарегистрировать вебхук';
+	        });
+	    }
+
+	    function tgTestNotify() {
+	      fetch('/api/tg/test-notify', { method: 'POST' })
+	        .then(function(r) { return r.json(); })
+	        .then(function(data) {
+	          if (data.ok) showToast('🤖', 'Уведомление отправлено', 'Проверьте чат с ботом');
+	          else showToast('⚠️', 'Ошибка', data.error || 'Не удалось отправить. Задайте ADMIN_TG_CHAT_ID');
+	        })
+	        .catch(function() { showToast('⚠️', 'Ошибка сети', 'Проверьте подключение'); });
 	    }
 
 	    function sendTestEmail() {

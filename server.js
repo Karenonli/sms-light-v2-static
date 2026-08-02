@@ -11,6 +11,9 @@ require('dotenv').config();
 // ===== Database =====
 const { db, getPool, initDb } = require('./lib/db');
 
+// ===== Telegram-бот (мини-маркет) =====
+const tgBot = require('./lib/tg-bot');
+
 // ===== Администраторы =====
 const ADMIN_EMAILS = ['justxirrez@inbox.ru', 'mikoto_11@list.ru'];
 
@@ -73,6 +76,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Сохранение сессии как Promise (для async-роутов)
+function saveSession(req) {
+  return new Promise(function(resolve, reject) {
+    req.session.save(function(err) { return err ? reject(err) : resolve(); });
+  });
+}
+
 // ===== Static files (только для локальной разработки) =====
 if (!process.env.VERCEL) {
   app.use(express.static(__dirname));
@@ -84,6 +94,7 @@ if (!process.env.VERCEL) {
   app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'register.html')));
   app.get('/forgot', (req, res) => res.sendFile(path.join(__dirname, 'forgot-password.html')));
   app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+  app.get('/shop', (req, res) => res.sendFile(path.join(__dirname, 'shop.html')));
 }
 
 // ========================================================================
@@ -574,6 +585,18 @@ app.post('/api/purchases', requireAuth, async (req, res) => {
        ON CONFLICT (id) DO NOTHING`,
       [purId, req.session.userId, serviceType || 'virtual', serviceName, country || '', price || 0, currency || 'RUB', created_at || new Date().toISOString()]
     );
+
+    // Telegram-уведомление администратору о новом заказе (если задан ADMIN_TG_CHAT_ID)
+    if (process.env.ADMIN_TG_CHAT_ID) {
+      tgBot.notifyAdmin(
+        '🛍️ Новый заказ №' + purId + '\n'
+        + 'Сервис: ' + serviceName + '\n'
+        + 'Страна: ' + (country || '—') + '\n'
+        + 'Цена: ' + (price || 0) + ' ' + (currency || 'RUB') + '\n'
+        + 'Статус: ' + tgBot.statusText('pending')
+      ).catch(function() {});
+    }
+
     res.json({ ok: true, id: purId });
   } catch (err) {
     console.error('Create purchase error:', err);
@@ -757,6 +780,113 @@ app.delete('/api/reviews/:id', requireAdmin, async (req, res) => {
     console.error('Delete review error:', err);
     res.json({ error: 'Ошибка сервера' });
   }
+});
+
+// ========================================================================
+//  API: Telegram-бот (мини-маркет)
+// ========================================================================
+
+// Вебхук Telegram. Сначала отвечаем 200 (Telegram ретраит только на не-200),
+// затем обрабатываем апдейт в фоне.
+app.post('/api/tg/webhook', async (req, res) => {
+  res.status(200).end();
+
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (secret && req.get('X-Telegram-Bot-Api-Secret-Token') !== secret) {
+    console.error('TG webhook: неверный secret token');
+    return;
+  }
+  tgBot.handleUpdate(req.body).catch(function(err) {
+    console.error('TG handleUpdate error:', err);
+  });
+});
+
+// Вход из Telegram Mini App: по подписанному initData создаём/входим
+// в детерминированный аккаунт tg<id>@telegram.local.
+app.post('/api/tg/auth', async (req, res) => {
+  try {
+    const initData = req.body && req.body.initData;
+    const v = tgBot.validateInitData(initData);
+    if (!v.ok) return res.status(401).json({ error: v.error });
+
+    const tgUser = v.user || {};
+    const email = tgBot.emailForTgUser(tgUser);
+    const name = ((tgUser.first_name || '') + (tgUser.last_name ? ' ' + tgUser.last_name : '')).trim() || 'Telegram';
+    const nickname = tgUser.username || '';
+
+    let user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+    if (!user) {
+      // Пароль пустой — вход только через Telegram (подпись initData уже проверена)
+      await db.run(
+        "INSERT INTO users (email, name, nickname, password, email_verified, is_admin, created_at) VALUES ($1, $2, $3, '', 1, 0, $4)",
+        [email, name, nickname, new Date().toISOString()]
+      );
+      user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+    } else {
+      await db.run('UPDATE users SET name = $1, nickname = $2 WHERE id = $3', [name, nickname, user.id]);
+    }
+
+    req.session.userId = user.id;
+    req.session.isAdmin = !!user.is_admin;
+    await saveSession(req);
+
+    res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        nickname: user.nickname || '',
+        email: user.email,
+        is_admin: !!user.is_admin,
+      },
+    });
+  } catch (err) {
+    console.error('TG auth error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Статус Telegram-интеграции (админ)
+app.get('/api/tg/status', requireAdmin, async (req, res) => {
+  try {
+    const token = tgBot.getToken();
+    if (!token) return res.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN не задан' });
+
+    const me = await tgBot.getMe();
+    const webhook = await tgBot.getWebhookInfo();
+
+    res.json({
+      ok: true,
+      tokenSet: true,
+      bot: me.ok ? me.result : null,
+      botError: me.ok ? null : me.error,
+      webhook: webhook.ok ? {
+        url: webhook.result.url,
+        pendingUpdateCount: webhook.result.pending_update_count || 0,
+        lastError: webhook.result.last_error_message || null,
+      } : null,
+      webhookError: webhook.ok ? null : webhook.error,
+      adminChatSet: !!process.env.ADMIN_TG_CHAT_ID,
+      adminChatId: process.env.ADMIN_TG_CHAT_ID || null,
+      siteBase: tgBot.SITE_BASE,
+      webhookUrl: tgBot.SITE_BASE + '/api/tg/webhook',
+    });
+  } catch (err) {
+    console.error('TG status error:', err);
+    res.json({ ok: false, error: err.message });
+  }
+});
+
+// Зарегистрировать вебхук (админ)
+app.post('/api/tg/register-webhook', requireAdmin, async (req, res) => {
+  const r = await tgBot.registerWebhook();
+  res.json(r);
+});
+
+// Тестовое уведомление в Telegram-чат администратора (админ)
+app.post('/api/tg/test-notify', requireAdmin, async (req, res) => {
+  const r = await tgBot.notifyAdmin('✅ Тестовое уведомление из SMS Light. Канал Telegram работает!');
+  res.json(r);
 });
 
 // ========================================================================
