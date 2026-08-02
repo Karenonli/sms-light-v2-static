@@ -3544,14 +3544,6 @@ body::before {
   65% { transform: translateY(-14px) rotateY(-18deg) rotateX(4deg); }
   85% { transform: translateY(-5px) rotateY(4deg) rotateX(-2deg); }
 }
-/* На мобильном телефон не подпрыгивает вверх на контент (поиск) — только лёгкий 2D-наклон.
-   2D, а не 3D (rotateY/rotateX): без preserve-3d телефон не уходит в отдельный композитный
-   слой и не может перекрыть выпадающий список выбора сервисов. */
-@keyframes phoneFloatTilt {
-  0%, 100% { transform: rotate(0deg) translateY(0); }
-  30% { transform: rotate(2deg) translateY(-4px); }
-  70% { transform: rotate(-2deg) translateY(-2px); }
-}
 .phone__screen {
   position: relative;
   width: 100%;
@@ -3864,9 +3856,11 @@ body::before {
   .hero__desc { font-size: 15px; }
   .hero__stats { gap: 22px; margin-top: 28px; padding-top: 22px; }
   .hero__stat-num { font-size: 17px; }
-  /* Телефон не подпрыгивает на контент — иначе перекрывает поисковую строку */
-  .hero__visual { perspective: none; transform-style: flat; z-index: 0; }
-  .phone { width: 260px; height: 520px; border-radius: 40px; transform-style: flat; animation-name: phoneFloatTilt; }
+  /* Телефон как на десктопе — объёмное вращение rotateY/rotateX (phoneFloat).
+     Перекрытие выпадающего поиска решено z-index (.hero__left z:2 > .hero__visual z:1),
+     поэтому 3D-анимация больше не создаёт проблем с перекрытием. */
+  .hero__visual { perspective: 1400px; z-index: 0; }
+  .phone { width: 260px; height: 520px; border-radius: 40px; transform-style: preserve-3d; animation-name: phoneFloat; }
   .phone__screen { border-radius: 31px; }
   .phone__notch { width: 96px; }
   /* Свечение не вылезает вверх на поиск */
