@@ -226,6 +226,77 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Регистрация по username: пользователь вводит username + пароль (2 раза) и
+// необязательную почту. Почта НЕ проверяется кодом — она нужна только для
+// восстановления через «Забыли пароль?». Аккаунт сохраняется за username+паролем.
+app.post('/api/auth/register-username', async (req, res) => {
+  try {
+    const { nickname, password, email } = req.body || {};
+    const uname = String(nickname || '').trim().replace(/^@/, '');
+    const pw = String(password || '');
+    const emailClean = String(email || '').trim().toLowerCase();
+
+    if (!uname) return res.json({ error: 'Введите username' });
+    if (uname.length < 3) return res.json({ error: 'Username должен быть минимум 3 символа' });
+    if (!/^[A-Za-z0-9_.-]+$/.test(uname)) {
+      return res.json({ error: 'Username может содержать только латинские буквы, цифры, точки, подчёркивания и дефисы' });
+    }
+    if (pw.length < 6) return res.json({ error: 'Пароль должен быть минимум 6 символов' });
+    if (emailClean && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+      return res.json({ error: 'Введите корректный email' });
+    }
+
+    const taken = await db.get('SELECT id FROM users WHERE LOWER(nickname) = $1', [uname.toLowerCase()]);
+    if (taken) return res.json({ error: 'Этот username уже занят. Выберите другой.' });
+
+    if (emailClean) {
+      const clash = await db.get('SELECT id FROM users WHERE email = $1', [emailClean]);
+      if (clash) return res.json({ error: 'Этот email уже зарегистрирован. Войдите через него.' });
+    }
+
+    const hash = await bcrypt.hash(pw, 10);
+    const isAdmin = ADMIN_EMAILS.includes(emailClean) ? 1 : 0;
+    // email NOT NULL UNIQUE: без указанной почты подставляем недостижимый
+    // плейсхолдер на базе username (username уникален) — восстановление по нему
+    // невозможно, что и ожидается для аккаунтов без email.
+    const finalEmail = emailClean || (uname.toLowerCase() + '@username.local');
+
+    await db.run(
+      'INSERT INTO users (name, nickname, email, password, is_admin, email_verified, created_at) VALUES ($1, $2, $3, $4, $5, 1, $6)',
+      [uname, uname, finalEmail, hash, isAdmin, new Date().toISOString()]
+    );
+    const saved = await db.get('SELECT id, name, nickname, email, is_admin FROM users WHERE LOWER(nickname) = $1', [uname.toLowerCase()]);
+    if (!saved) return res.json({ error: 'Ошибка сервера' });
+
+    // Telegram-уведомление админу (await обязателен на Vercel).
+    if (process.env.ADMIN_TG_CHAT_ID && !isAdmin) {
+      try {
+        await tgBot.notifyAdmin(
+          '👤 Новый пользователь (по username)\nUsername: @' + uname
+          + (emailClean ? '\nEmail: ' + emailClean : ''),
+          tgAdminKeyboard()
+        );
+      } catch (err) {
+        console.error('TG notifyAdmin (register-username) error:', err);
+      }
+    }
+
+    req.session.userId = saved.id;
+    req.session.isAdmin = saved.is_admin === 1;
+    await saveSession(req);
+
+    res.json({
+      ok: true,
+      registered: true,
+      is_admin: saved.is_admin === 1,
+      user: { id: saved.id, name: saved.name, nickname: saved.nickname, email: saved.email, is_admin: saved.is_admin },
+    });
+  } catch (err) {
+    console.error('Register-username error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Подтверждение email
 app.post('/api/auth/verify', async (req, res) => {
   try {
@@ -267,23 +338,25 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
-// Вход
+// Вход. login — это email ИЛИ username (регистрация по username):
+// ищем по email либо по nickname без учёта регистра.
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const login = String(req.body.login || req.body.email || '').trim().replace(/^@/, '');
+    const { password } = req.body;
 
-    if (!email || !password) {
-      return res.json({ error: 'Введите email и пароль' });
+    if (!login || !password) {
+      return res.json({ error: 'Введите логин и пароль' });
     }
 
-    const user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+    const user = await db.get('SELECT * FROM users WHERE email = $1 OR LOWER(nickname) = LOWER($1)', [login]);
     if (!user) {
-      return res.json({ error: 'Неверный email или пароль' });
+      return res.json({ error: 'Неверный логин или пароль' });
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res.json({ error: 'Неверный email или пароль' });
+      return res.json({ error: 'Неверный логин или пароль' });
     }
 
     if (!user.email_verified) {

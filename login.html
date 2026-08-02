@@ -39,8 +39,8 @@
     [data-theme="light"] .verify-banner__title { color: var(--gray-50); }
     [data-theme="light"] .verify-banner__text { color: var(--gray-500); }
 
-    /* === Telegram login === */
-    .auth__tg-divider {
+    /* === Login по username === */
+    .auth__divider {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -48,18 +48,16 @@
       color: var(--gray-400);
       font-size: 13px;
     }
-    .auth__tg-divider::before,
-    .auth__tg-divider::after {
+    .auth__divider::before,
+    .auth__divider::after {
       content: '';
       flex: 1;
       height: 1px;
       background: var(--gray-800);
     }
-    #tgLoginBox { text-align: center; }
-    #tgLoginBox .telegram-login-widget { margin: 0 auto; }
-    [data-theme="light"] .auth__tg-divider { color: var(--gray-500); }
-    [data-theme="light"] .auth__tg-divider::before,
-    [data-theme="light"] .auth__tg-divider::after { background: var(--gray-300); }
+    [data-theme="light"] .auth__divider { color: var(--gray-500); }
+    [data-theme="light"] .auth__divider::before,
+    [data-theme="light"] .auth__divider::after { background: var(--gray-300); }
   </style>
 </head>
 <body>
@@ -136,11 +134,23 @@
         <button type="submit" class="btn btn--full" id="loginBtn">Войти</button>
       </form>
 
-      <!-- Telegram login -->
-      <div class="auth__tg-divider"><span>или войдите по username</span></div>
-      <div id="tgLoginBox">
-        <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="SMS_LIGHT_Official_bot" data-size="large" data-radius="10" data-lang="ru" data-onauth="onTgLoginAuth" data-request-access="write"></script>
-      </div>
+      <!-- Login по username -->
+      <div class="auth__divider"><span>или войдите по username</span></div>
+      <form class="auth__form" id="usernameLoginForm">
+        <div class="form-group">
+          <label for="uname">Username</label>
+          <input type="text" id="uname" class="form-input" placeholder="Ваш username (например, ivan)" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="unamePassword">Пароль</label>
+          <input type="password" id="unamePassword" class="form-input" placeholder="••••••" autocomplete="current-password" required>
+        </div>
+        <div class="form-group" style="text-align:right;margin-top:-8px;margin-bottom:8px;">
+          <a href="forgot-password.html" style="font-size:13px;color:var(--green);text-decoration:none;font-weight:500;">Забыли пароль?</a>
+        </div>
+        <div class="form-error" id="unameFormError" style="display:none"></div>
+        <button type="submit" class="btn btn--full" id="unameLoginBtn">Войти</button>
+      </form>
 
       <p class="auth__switch">
         Нет аккаунта?
@@ -160,6 +170,27 @@
   var verifyInput = document.getElementById('verifyCodeInput');
   var verifyBtn = document.getElementById('verifyCodeBtn');
   var resendLink = document.getElementById('resendVerifyLink');
+
+  // Общий успешный вход: берём профиль с сервера и редиректим
+  function redirectAfterLogin(data) {
+    _loginEmail = '';
+    verifyBanner.style.display = 'none';
+    fetch('/api/auth/me')
+      .then(function(r) { return r.json(); })
+      .then(function(user) {
+        if (user.authed && typeof Auth !== 'undefined' && Auth.setSession) {
+          // Store minimal session for localStorage-based legacy features
+          try {
+            localStorage.setItem('sms_session', JSON.stringify({ id: user.id, name: user.name, nickname: user.nickname, email: user.email, is_admin: user.is_admin }));
+            localStorage.setItem('sms_user', JSON.stringify({ id: user.id, name: user.name, email: user.email }));
+          } catch(e) {}
+        }
+        window.location.href = data.is_admin ? 'admin.html' : 'index.html';
+      })
+      .catch(function() {
+        window.location.href = data.is_admin ? 'admin.html' : 'index.html';
+      });
+  }
 
   form.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -189,26 +220,7 @@
         return;
       }
 
-      // Success — store minimal session in localStorage for legacy code
-      _loginEmail = '';
-      verifyBanner.style.display = 'none';
-
-      // Fetch user data and redirect
-      fetch('/api/auth/me')
-        .then(function(r) { return r.json(); })
-        .then(function(user) {
-          if (user.authed && typeof Auth !== 'undefined' && Auth.setSession) {
-            // Store minimal session for localStorage-based legacy features
-            try {
-              localStorage.setItem('sms_session', JSON.stringify({ id: user.id, name: user.name, nickname: user.nickname, email: user.email, is_admin: user.is_admin }));
-              localStorage.setItem('sms_user', JSON.stringify({ id: user.id, name: user.name, email: user.email }));
-            } catch(e) {}
-          }
-          window.location.href = data.is_admin ? 'admin.html' : 'index.html';
-        })
-        .catch(function() {
-          window.location.href = data.is_admin ? 'admin.html' : 'index.html';
-        });
+      redirectAfterLogin(data);
     }
 
     // Локальный режим: страница открыта через file:// — сервера нет, используем localStorage
@@ -368,6 +380,58 @@
     });
   });
 
+  // --- Вход по username ---
+  var uform = document.getElementById('usernameLoginForm');
+  var ubtn = document.getElementById('unameLoginBtn');
+  var uerr = document.getElementById('unameFormError');
+
+  uform.addEventListener('submit', function(e) {
+    e.preventDefault();
+    uerr.style.display = 'none'; uerr.textContent = '';
+    ubtn.disabled = true; ubtn.textContent = 'Вход...';
+
+    var username = document.getElementById('uname').value.trim().replace(/^@/, '');
+    var password = document.getElementById('unamePassword').value;
+
+    if (!username || !password) {
+      uerr.textContent = 'Введите username и пароль';
+      uerr.style.display = 'block';
+      ubtn.disabled = false; ubtn.textContent = 'Войти';
+      return;
+    }
+
+    function uLoginOk(data) {
+      if (data.error) {
+        uerr.textContent = data.error;
+        uerr.style.display = 'block';
+        ubtn.disabled = false; ubtn.textContent = 'Войти';
+        return;
+      }
+      redirectAfterLogin(data);
+    }
+
+    // Локальный режим (file://): сервера нет — вход по username работает только на реальном сайте.
+    if (window.Auth && Auth.isLocalMode()) {
+      uerr.textContent = 'Демо-режим (файл открыт без сервера). Вход по username работает на реальном сайте — sms-light-v2-static.vercel.app';
+      uerr.style.display = 'block';
+      ubtn.disabled = false; ubtn.textContent = 'Войти';
+      return;
+    }
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: username, password: password })
+    })
+    .then(function(r) { return r.json(); })
+    .then(uLoginOk)
+    .catch(function() {
+      uerr.textContent = 'Ошибка соединения с сервером. Проверьте подключение и попробуйте ещё раз.';
+      uerr.style.display = 'block';
+      ubtn.disabled = false; ubtn.textContent = 'Войти';
+    });
+  });
+
   // Currency switcher
   (function() {
     var select = document.getElementById('currencySelect');
@@ -379,55 +443,6 @@
     });
   })();
 })();
-</script>
-
-<script>
-// Вход через Telegram Login Widget (виджет вызывает onTgLoginAuth с authResult)
-function onTgLoginAuth(user) {
-  var err = document.getElementById('formError');
-  var btn = document.getElementById('loginBtn');
-  err.style.display = 'none'; err.textContent = '';
-
-  // Локальный режим (file://): сервера нет — Telegram-вход работает только на реальном сайте.
-  if (window.Auth && Auth.isLocalMode()) {
-    err.textContent = 'Демо-режим (файл открыт без сервера). Вход через Telegram работает на реальном сайте — sms-light-v2-static.vercel.app';
-    err.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true; btn.textContent = 'Вход через Telegram...';
-
-  fetch('/api/auth/tg-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authResult: user })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    btn.disabled = false; btn.textContent = 'Войти';
-    if (data.error) {
-      if (data.not_found) {
-        err.innerHTML = data.error + ' <a href="register.html" style="color:#10b981;font-weight:600;text-decoration:none;">Зарегистрироваться</a>';
-      } else {
-        err.textContent = data.error;
-      }
-      err.style.display = 'block';
-      return;
-    }
-    if (data.user) {
-      try {
-        localStorage.setItem('sms_session', JSON.stringify(data.user));
-        localStorage.setItem('sms_user', JSON.stringify({ id: data.user.id, name: data.user.name, email: data.user.email }));
-      } catch(e) {}
-    }
-    window.location.href = data.is_admin ? 'admin.html' : 'index.html';
-  })
-  .catch(function() {
-    btn.disabled = false; btn.textContent = 'Войти';
-    err.textContent = 'Ошибка соединения с сервером. Попробуйте ещё раз.';
-    err.style.display = 'block';
-  });
-}
 </script>
 
   </main>
