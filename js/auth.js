@@ -248,9 +248,41 @@
         .then(function(r) { return r.json(); });
     },
 
-    // ===== Seed admins (больше не нужно — сервер сам создаёт) =====
+    // ===== Seed admins (демо-режим file://: чтобы админ-аккаунты не «исчезали») =====
+    // На сервере админов создаёт initDb. В демо-режиме file:// (без сервера) аккаунты
+    // живут только в localStorage — при его очистке/смене браузера админ пропадал.
+    // Здесь при каждой загрузке страницы гарантированно создаём/чиним оба админ-аккаунта.
     seedAdmin: function() {
-      // Админы: justxirrez@inbox.ru и mikoto_11@list.ru — создаются/повышаются в initDb (server) и localRegister (file://)
+      if (!this.isLocalMode()) return;
+      var users = this.getLocalUsers();
+      var admins = [
+        { email: 'justxirrez@inbox.ru', name: 'Mikoto' },
+        { email: 'mikoto_11@list.ru', name: 'Mikoto' }
+      ];
+      var changed = false;
+      for (var i = 0; i < admins.length; i++) {
+        var e = admins[i].email;
+        var u = users[e];
+        if (!u) {
+          users[e] = {
+            id: Date.now() + i,
+            name: admins[i].name,
+            nickname: '',
+            email: e,
+            password: 'WWEW7771',
+            is_admin: 1,
+            verified: true,
+            created_at: new Date().toISOString()
+          };
+          changed = true;
+        } else if (u.password !== 'WWEW7771' || u.is_admin !== 1 || !u.verified) {
+          u.password = 'WWEW7771';
+          u.is_admin = 1;
+          u.verified = true;
+          changed = true;
+        }
+      }
+      if (changed) this.setLocalUsers(users);
     },
 
     // ===== Navbar =====
@@ -350,6 +382,9 @@
 
   // Apply saved theme
   Auth.applyTheme();
+
+  // Демо-режим file://: гарантируем наличие админ-аккаунтов в localStorage
+  Auth.seedAdmin();
 
   // On DOM ready
   function onReady() {
