@@ -2574,6 +2574,24 @@ input, button, select, textarea { font-family: inherit; }
 [data-theme="light"] .theme-toggle__sun { display: none; }
 [data-theme="light"] .theme-toggle__moon { display: block; }
 
+/* Telegram button — рядом с переключателем темы, открывает чат в Telegram */
+.telegram-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  color: #2aabee;
+  transition: var(--transition);
+  line-height: 1;
+  text-decoration: none;
+}
+.telegram-btn:hover {
+  background: var(--gray-800);
+  color: #6ec9ff;
+}
+.telegram-btn svg { width: 17px; height: 17px; }
+
 /* Modal overlay (order form) */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
