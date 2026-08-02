@@ -1328,6 +1328,18 @@ input, button, select, textarea { font-family: inherit; }
   line-height: 1.65;
 }
 
+/* --- Brand banner (дизайнерская картина с названием магазина) --- */
+.banner {
+  padding: 8px 0 20px;
+}
+.banner__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 22px;
+  box-shadow: 0 30px 80px -34px rgba(16, 185, 129, 0.35);
+}
+
 /* --- Popular services (карточки быстрого выбора) --- */
 .popular {
   padding: 0 0 48px;
