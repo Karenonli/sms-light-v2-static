@@ -8,200 +8,198 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=13">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="js/data.js"></script>
 <style>
-  :root {
-    --green-300: #6ee7b7;
-    --green-400: #34d399;
-    --green-500: #10b981;
-    --green-600: #059669;
-    --green-subtle: rgba(16, 185, 129, 0.08);
-    --bg: #080a0a;
-    --bg-2: #0c0e0e;
-    --bg-3: #101212;
-    --card: #0e1010;
-    --card-border: #222424;
-    --gray-800: #202222;
-    --gray-700: #353737;
-    --gray-500: #636565;
-    --gray-400: #818383;
-    --gray-300: #9fa1a1;
-    --gray-200: #bdbebe;
-    --gray-100: #d8d9d9;
-    --white: #eef0f0;
-    --red: #ef4444;
-    --yellow: #eab308;
-    --radius: 12px;
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { background: var(--bg); color: var(--white); font-family: var(--font); }
-  body { min-height: 100vh; }
-  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  /* ===== Мини-маркет: свои компоненты поверх style.css (токены сайта) ===== */
+  button { font-family: inherit; cursor: pointer; }
 
-  /* ===== App container ===== */
-  .ms-app { max-width: 640px; margin: 0 auto; padding: 14px 16px 120px; }
+  .ms-app, .ms-screen { padding-bottom: 120px; }
 
-  /* ===== Header ===== */
-  .ms-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-  .ms-brand { display: flex; align-items: center; gap: 10px; }
-  .ms-brand__logo {
-    width: 40px; height: 40px; border-radius: 12px; flex: 0 0 auto;
-    background: linear-gradient(135deg, var(--green-500), var(--green-600));
-    display: flex; align-items: center; justify-content: center; font-size: 20px;
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  /* Демо-баннер */
+  .ms-banner {
+    background: rgba(234, 179, 8, 0.08);
+    border: 1px solid rgba(234, 179, 8, 0.28);
+    color: #fde68a;
+    font-size: 12.5px;
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin: 16px 0 12px;
+    line-height: 1.45;
   }
-  .ms-brand__name { font-size: 17px; font-weight: 800; letter-spacing: -0.2px; }
-  .ms-brand__sub { font-size: 12px; color: var(--gray-300); margin-top: 1px; }
+
+  /* Кнопка заказов в шапке (как .btn--outline на сайте) */
   .ms-orders-btn {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
-    padding: 9px 12px; font-size: 13px; font-weight: 600; color: var(--gray-100);
-    display: flex; align-items: center; gap: 6px; transition: 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 13px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--gray-750);
+    color: var(--gray-200);
+    white-space: nowrap;
+    transition: all 0.2s ease;
   }
-  .ms-orders-btn:active { background: var(--bg-3); }
+  .ms-orders-btn:active { background: var(--bg-3); border-color: var(--green-700); }
   .ms-orders-count {
-    background: var(--green-500); color: #04120c; font-size: 11px; font-weight: 800;
-    min-width: 18px; height: 18px; border-radius: 9px; display: none; align-items: center; justify-content: center; padding: 0 5px;
+    background: var(--green-500);
+    color: #04120c;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    display: none;
+    align-items: center;
+    justify-content: center;
   }
   .ms-orders-count--on { display: inline-flex; }
 
-  /* ===== Demo banner ===== */
-  .ms-banner {
-    background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25);
-    color: #fde68a; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.45;
-  }
+  /* Поиск */
+  .ms-search { margin-top: 16px; }
 
-  /* ===== Search ===== */
-  .ms-search { margin-bottom: 12px; }
-  .ms-search input {
-    width: 100%; background: var(--bg-2); border: 1px solid var(--card-border);
-    border-radius: 10px; padding: 12px 14px; font-size: 14px; color: var(--white);
-    font-family: inherit; outline: none; transition: border-color 0.15s ease;
-  }
-  .ms-search input:focus { border-color: var(--green-600); }
-  .ms-search input::placeholder { color: var(--gray-500); }
-
-  /* ===== Categories ===== */
+  /* Категории */
   .ms-cats {
-    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px;
-    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 0 4px;
+    margin: 14px 0 16px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
   .ms-cats::-webkit-scrollbar { display: none; }
   .ms-chip {
-    flex: 0 0 auto; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
-    background: var(--card); border: 1px solid var(--card-border); color: var(--gray-300);
-    white-space: nowrap; transition: 0.15s ease;
+    flex: 0 0 auto;
+    padding: 8px 15px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--surface);
+    border: 1px solid var(--gray-800);
+    color: var(--gray-300);
+    transition: all 0.15s ease;
   }
   .ms-chip:active { opacity: 0.8; }
-  .ms-chip--active { background: var(--green-subtle); border-color: var(--green-600); color: var(--green-300); }
-
-  /* ===== Grid ===== */
-  .ms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .ms-card {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
-    padding: 14px; display: flex; flex-direction: column; gap: 10px;
-    transition: 0.15s ease; text-align: left;
+  .ms-chip--active {
+    background: var(--green-subtle);
+    border-color: var(--green-600);
+    color: var(--green-300);
   }
-  .ms-card:active { transform: scale(0.97); border-color: var(--green-700); }
-  .ms-card__logo {
-    width: 42px; height: 42px; border-radius: 10px; flex: 0 0 auto;
-    background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(16,185,129,0.06));
-    border: 1px solid rgba(16,185,129,0.22);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 800; color: var(--green-400); letter-spacing: 0.5px;
-  }
-  .ms-card__name { font-size: 13.5px; font-weight: 600; color: var(--white); line-height: 1.3; flex: 1; }
-  .ms-card__price { font-size: 13px; font-weight: 700; color: var(--green-400); }
-  .ms-card__price small { font-weight: 500; color: var(--gray-500); }
 
-  /* ===== Empty ===== */
-  .ms-empty { text-align: center; color: var(--gray-500); font-size: 14px; padding: 40px 0; }
+  /* Отступ перед каталогом */
+  .ms-catalog { padding-top: 24px; }
 
-  /* ===== Screen (orders) ===== */
-  .ms-screen { max-width: 640px; margin: 0 auto; padding: 14px 16px 120px; }
-  .ms-screen__title { font-size: 18px; font-weight: 800; margin-bottom: 14px; }
+  /* Пусто */
+  .ms-empty { text-align: center; color: var(--gray-500); font-size: 14px; padding: 48px 0; }
+
+  /* ===== Экран заказов ===== */
+  .ms-screen { padding-top: 20px; }
   .ms-order {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
-    padding: 14px; margin-bottom: 10px;
+    background: var(--surface);
+    border: 1px solid var(--gray-800);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
   }
   .ms-order__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .ms-order__service { font-size: 15px; font-weight: 700; }
+  .ms-order__service { font-size: 15px; font-weight: 700; color: var(--white); }
   .ms-order__meta { font-size: 12.5px; color: var(--gray-300); margin-top: 4px; line-height: 1.5; }
   .ms-order__price { font-size: 14px; font-weight: 800; color: var(--green-400); white-space: nowrap; }
-  .ms-order__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+  .ms-order__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gray-800);
+  }
   .ms-order__phone { font-size: 13.5px; color: var(--gray-100); }
   .ms-order__phone b { color: var(--green-400); }
   .ms-order__cancel { font-size: 12.5px; color: var(--red); font-weight: 600; padding: 4px 0; }
   .ms-status { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; display: inline-block; }
-  .ms-status--pending { background: rgba(234,179,8,0.1); color: var(--yellow); }
-  .ms-status--completed { background: rgba(16,185,129,0.12); color: var(--green-400); }
-  .ms-status--rejected { background: rgba(239,68,68,0.12); color: #f87171; }
+  .ms-status--pending { background: rgba(234, 179, 8, 0.1); color: var(--yellow); }
+  .ms-status--completed { background: var(--green-subtle); color: var(--green-400); }
+  .ms-status--rejected { background: rgba(239, 68, 68, 0.12); color: #f87171; }
 
   /* ===== Bottom sheet ===== */
   .ms-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 50;
-    display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
   }
   .ms-overlay--open { opacity: 1; pointer-events: auto; }
   .ms-sheet {
-    background: var(--bg-2); border: 1px solid var(--card-border); border-bottom: none;
-    border-radius: 18px 18px 0 0; max-width: 640px; width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--gray-800);
+    border-bottom: none;
+    border-radius: 18px 18px 0 0;
+    max-width: 640px; width: 100%;
     padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
-    transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 88vh; overflow-y: auto;
   }
   .ms-overlay--open .ms-sheet { transform: translateY(0); }
-  .ms-sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--gray-700); margin: 0 auto 14px; }
+  .ms-sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--gray-750); margin: 0 auto 14px; }
   .ms-sheet__service { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .ms-sheet__logo {
     width: 48px; height: 48px; border-radius: 12px; flex: 0 0 auto;
-    background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(16,185,129,0.06));
-    border: 1px solid rgba(16,185,129,0.22);
+    background: var(--green-subtle);
+    border: 1px solid rgba(16, 185, 129, 0.22);
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 800; color: var(--green-400);
   }
-  .ms-sheet__name { font-size: 16px; font-weight: 800; }
+  .ms-sheet__name { font-size: 16px; font-weight: 800; color: var(--white); }
   .ms-sheet__price { font-size: 13.5px; color: var(--green-400); font-weight: 700; margin-top: 2px; }
 
   .ms-field { margin-bottom: 14px; }
-  .ms-field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-300); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .ms-field label {
+    display: block; font-size: 12px; font-weight: 600; color: var(--gray-300);
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
   .ms-field select {
-    width: 100%; background: var(--bg-3); border: 1px solid var(--card-border); border-radius: 10px;
-    padding: 12px 14px; font-size: 14px; color: var(--white); font-family: inherit; outline: none; appearance: none;
+    width: 100%;
+    background: var(--bg-3);
+    border: 1px solid var(--gray-800);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 14px;
+    color: var(--white);
+    font-family: inherit;
+    outline: none;
+    appearance: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239fa1a1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-    background-repeat: no-repeat; background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-position: right 14px center;
   }
   .ms-field select:focus { border-color: var(--green-600); }
 
-  .ms-btn {
-    width: 100%; background: linear-gradient(135deg, var(--green-500), var(--green-600));
-    color: #04120c; font-weight: 800; font-size: 15px; border-radius: 11px; padding: 14px;
-    transition: 0.15s ease; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-  }
-  .ms-btn:active { transform: scale(0.98); }
-  .ms-btn:disabled { opacity: 0.45; box-shadow: none; cursor: not-allowed; }
-  .ms-btn--ghost {
-    background: var(--bg-3); color: var(--gray-100); border: 1px solid var(--card-border);
-    box-shadow: none; margin-top: 8px;
-  }
-
   .ms-success { text-align: center; padding: 8px 0 4px; }
   .ms-success__icon { font-size: 44px; margin-bottom: 8px; }
-  .ms-success__title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+  .ms-success__title { font-size: 16px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
   .ms-success__text { font-size: 13.5px; color: var(--gray-200); line-height: 1.55; }
   .ms-success__text b { color: var(--green-400); }
-  .ms-success__steps { text-align: left; font-size: 13px; color: var(--gray-200); line-height: 1.7; background: var(--bg-3); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 14px; margin: 12px 0 4px; }
+  .ms-success__steps {
+    text-align: left; font-size: 13px; color: var(--gray-200); line-height: 1.7;
+    background: var(--bg-3); border: 1px solid var(--gray-800); border-radius: var(--radius);
+    padding: 12px 14px; margin: 12px 0 4px;
+  }
   .ms-success__steps span { color: var(--green-400); font-weight: 800; }
 
   .ms-hint { font-size: 12.5px; color: var(--gray-400); text-align: center; margin-top: 10px; line-height: 1.5; }
 
   /* ===== Toast ===== */
   .ms-toast {
-    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(80px);
-    background: var(--gray-800); color: var(--white); font-size: 13.5px; font-weight: 600;
-    padding: 11px 18px; border-radius: 10px; z-index: 100; opacity: 0; transition: 0.25s ease;
-    max-width: 90vw; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface-3); color: var(--white);
+    font-size: 13.5px; font-weight: 600;
+    padding: 11px 18px; border-radius: 10px;
+    z-index: 100; opacity: 0; transition: all 0.25s ease;
+    max-width: 90vw; text-align: center; box-shadow: var(--shadow-lg);
   }
   .ms-toast--on { transform: translateX(-50%) translateY(0); opacity: 1; }
   .ms-toast--err { background: #3f1d1d; color: #fca5a5; }
@@ -209,34 +207,37 @@
 </head>
 <body>
 
-<div id="app" class="ms-app">
-  <header class="ms-header">
-    <div class="ms-brand">
-      <span class="ms-brand__logo">📲</span>
-      <div>
-        <div class="ms-brand__name">SMS Light</div>
-        <div class="ms-brand__sub">Виртуальные номера</div>
-      </div>
-    </div>
+<header class="header">
+  <div class="container header__inner">
+    <a class="logo" onclick="return false">
+      <span class="logo__text">SMS<span class="logo__accent">Light</span></span>
+    </a>
     <button class="ms-orders-btn" onclick="Shop.toggleOrders()">
       📋 Мои заказы <span id="ordersCount" class="ms-orders-count"></span>
     </button>
-  </header>
+  </div>
+</header>
 
+<div id="app" class="container ms-app">
   <div id="msBanner" class="ms-banner" style="display:none"></div>
 
-  <div class="ms-search">
-    <input id="msSearch" type="search" placeholder="Поиск сервиса…" autocomplete="off" oninput="Shop.applyFilters()">
+  <div class="search-box ms-search">
+    <svg class="search-box__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.35-4.35"></path></svg>
+    <input id="msSearch" class="search-box__input" type="search" placeholder="Поиск сервиса…" autocomplete="off" oninput="Shop.applyFilters()">
   </div>
 
   <div id="msCats" class="ms-cats"></div>
-  <div id="msGrid" class="ms-grid"></div>
-  <div id="msEmpty" class="ms-empty" style="display:none">Ничего не найдено 🙁</div>
+
+  <section class="popular ms-catalog">
+    <h2 class="popular__title">Каталог</h2>
+    <div id="msGrid" class="popular__grid"></div>
+    <div id="msEmpty" class="ms-empty" style="display:none">Ничего не найдено 🙁</div>
+  </section>
 </div>
 
 <!-- Orders screen -->
-<div id="ordersScreen" class="ms-screen" style="display:none">
-  <div class="ms-screen__title">📋 Мои заказы</div>
+<div id="ordersScreen" class="container ms-screen" style="display:none">
+  <h2 class="popular__title">📋 Мои заказы</h2>
   <div id="ordersList"></div>
 </div>
 
@@ -331,7 +332,7 @@ window.Shop = (function() {
     el.innerHTML = html;
   }
 
-  // ===== Каталог =====
+  // ===== Каталог (карточки в стиле сайта — .popular-card) =====
   function applyFilters() {
     var q = (document.getElementById('msSearch').value || '').trim().toLowerCase();
     var services = Data.getServices(cat || null);
@@ -349,11 +350,14 @@ window.Shop = (function() {
     for (var j = 0; j < items.length; j++) {
       var sv = items[j];
       html +=
-        '<button class="ms-card" onclick="Shop.openOrder(\'' + sv.id + '\')">' +
-          '<span class="ms-card__logo">' + logo(sv.id) + '</span>' +
-          '<span class="ms-card__name">' + esc(sv.name) + '</span>' +
-          '<span class="ms-card__price">' + fmtPrice(sv.price) + '</span>' +
-        '</button>';
+        '<div class="popular-card" role="button" tabindex="0" onclick="Shop.openOrder(\'' + sv.id + '\')">' +
+          '<span class="popular-card__logo">' + logo(sv.id) + '</span>' +
+          '<span class="popular-card__body">' +
+            '<span class="popular-card__name">' + esc(sv.name) + '</span>' +
+            '<span class="popular-card__price">' + fmtPrice(sv.price) + '</span>' +
+          '</span>' +
+          '<span class="popular-card__pick" aria-hidden="true">→</span>' +
+        '</div>';
     }
     grid.innerHTML = html;
     empty.style.display = items.length ? 'none' : 'block';
@@ -411,7 +415,7 @@ window.Shop = (function() {
         '<label for="msCountry">Страна</label>' +
         '<select id="msCountry">' + options + '</select>' +
       '</div>' +
-      '<button class="ms-btn" id="msBuyBtn" onclick="Shop.submitOrder(\'' + sv.id + '\')">Оформить заказ</button>' +
+      '<button class="btn btn--lg btn--full" id="msBuyBtn" onclick="Shop.submitOrder(\'' + sv.id + '\')">Оформить заказ</button>' +
       (authed ? '' : '<div class="ms-hint">Доступно только при открытии через бота Telegram</div>');
 
     document.getElementById('orderOverlay').classList.add('ms-overlay--open');
@@ -445,8 +449,8 @@ window.Shop = (function() {
           '<div><span>3.</span> Пришлите скриншот оплаты в чат с ботом.</div>' +
           '<div><span>4.</span> Номер появится в «Моих заказах» после подтверждения.</div>' +
         '</div>' +
-        '<button class="ms-btn" onclick="Shop.closeSheet(); Shop.toggleOrders()">📋 Мои заказы</button>' +
-        '<button class="ms-btn ms-btn--ghost" onclick="Shop.closeSheet()">Продолжить покупки</button>' +
+        '<button class="btn btn--lg btn--full" onclick="Shop.closeSheet(); Shop.toggleOrders()">📋 Мои заказы</button>' +
+        '<button class="btn btn--lg btn--full btn--outline" style="margin-top:8px" onclick="Shop.closeSheet()">Продолжить покупки</button>' +
       '</div>';
     toast('Заказ №' + p.id + ' создан');
   }
