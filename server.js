@@ -948,36 +948,6 @@ app.post('/api/tg/test-notify', requireAdmin, async (req, res) => {
   res.json(r);
 });
 
-// ===== TEMP (убрать после проверки уведомлений): диагностика/очистка =====
-// Закрыт ключом CLEANUP_KEY из заголовка X-Cleanup-Key. Удаляется вместе
-// с переменной окружения после прогона теста уведомлений.
-if (process.env.CLEANUP_KEY) {
-  app.post('/api/_cleanup', async (req, res) => {
-    try {
-      if (req.headers['x-cleanup-key'] !== process.env.CLEANUP_KEY) {
-        return res.status(403).json({ error: 'bad key' });
-      }
-      const { action, email } = req.body || {};
-      if (action === 'lookup') {
-        const u = await db.get('SELECT id, name, email, is_admin FROM users WHERE email = $1', [email]);
-        return res.json({ ok: true, user: u });
-      }
-      if (action === 'purge') {
-        const u = await db.get('SELECT id FROM users WHERE email = $1', [email]);
-        if (!u) return res.json({ ok: true, removed: 0 });
-        await db.run('DELETE FROM messages WHERE sender_id = $1 OR receiver_id = $1', [u.id]);
-        await db.run('DELETE FROM purchases WHERE user_id = $1', [u.id]);
-        await db.run('DELETE FROM users WHERE id = $1', [u.id]);
-        return res.json({ ok: true, removed: u.id });
-      }
-      return res.json({ error: 'unknown action' });
-    } catch (err) {
-      console.error('Cleanup error:', err);
-      res.json({ error: err.message });
-    }
-  });
-}
-
 // ========================================================================
 //  Экспорт + запуск
 // ========================================================================
