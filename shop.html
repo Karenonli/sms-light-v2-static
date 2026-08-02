@@ -1,649 +1,1212 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="color-scheme" content="dark">
-<title>Мини-маркет — SMS Light</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=13">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="js/data.js"></script>
-<style>
-  /* ===== Мини-маркет: свои компоненты поверх style.css (токены сайта) ===== */
-  button { font-family: inherit; cursor: pointer; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="SMS Light — Купить виртуальные номера быстро и просто для Telegram, WhatsApp, Instagram и других сервисов. Моментальная доставка, низкие цены.">
+  <meta name="keywords" content="купить виртуальные номера, смс активация, виртуальный номер, telegram, whatsapp, sms light">
+  <meta name="robots" content="index, follow">
+  <title>SMS Light — Купить виртуальные номера быстро и просто</title>
+  <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=13">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Preloader — entrance animation before page content (как на сайте) */
+    .preloader {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--black, #0a0a0a);
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    .preloader--hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .preloader__logo {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--white, #ffffff);
+      animation: prelogo 1.4s ease both;
+    }
+    .preloader__logo .green {
+      color: var(--green-500, #10b981);
+    }
+    .preloader__bar {
+      width: 0;
+      height: 3px;
+      background: var(--green-500, #10b981);
+      border-radius: 3px;
+      margin-top: 24px;
+      animation: prebar 0.8s ease 0.3s both;
+    }
+    .preloader__hint {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--gray-500, #666);
+      animation: fadeIn 0.6s ease 0.6s both;
+    }
+    @keyframes prelogo {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes prebar {
+      0% { width: 0; }
+      100% { width: 120px; }
+    }
 
-  .ms-app, .ms-screen { padding-bottom: 120px; }
+    /* ===== Мини-маркет: свои компоненты поверх style.css (токены сайта) ===== */
+    button { font-family: inherit; cursor: pointer; }
 
-  /* Демо-баннер */
-  .ms-banner {
-    background: rgba(234, 179, 8, 0.08);
-    border: 1px solid rgba(234, 179, 8, 0.28);
-    color: #fde68a;
-    font-size: 12.5px;
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    margin: 16px 0 12px;
-    line-height: 1.45;
-  }
+    /* Демо-баннер (только когда мини-апп открыт вне Telegram) */
+    .ms-banner {
+      background: rgba(234, 179, 8, 0.08);
+      border: 1px solid rgba(234, 179, 8, 0.28);
+      color: var(--yellow, #fde68a);
+      font-size: 12.5px;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin: 14px 0 0;
+      line-height: 1.45;
+    }
 
-  /* Кнопка заказов в шапке (как .btn--outline на сайте) */
-  .ms-orders-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 13px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: 10px;
-    background: transparent;
-    border: 1px solid var(--gray-750);
-    color: var(--gray-200);
-    white-space: nowrap;
-    transition: all 0.2s ease;
-  }
-  .ms-orders-btn:active { background: var(--bg-3); border-color: var(--green-700); }
-  .ms-orders-count {
-    background: var(--green-500);
-    color: #04120c;
-    font-size: 11px;
-    font-weight: 800;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-  }
-  .ms-orders-count--on { display: inline-flex; }
+    /* ===== Bottom sheet заказа ===== */
+    .ms-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 5000;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    }
+    .ms-overlay--open { opacity: 1; pointer-events: auto; }
+    .ms-sheet {
+      background: var(--bg-2);
+      border: 1px solid var(--gray-800);
+      border-bottom: none;
+      border-radius: 18px 18px 0 0;
+      max-width: 640px; width: 100%;
+      padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 88vh; overflow-y: auto;
+    }
+    .ms-overlay--open .ms-sheet { transform: translateY(0); }
+    .ms-sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--gray-750); margin: 0 auto 14px; }
+    .ms-sheet__service { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .ms-sheet__logo {
+      width: 48px; height: 48px; border-radius: 12px; flex: 0 0 auto;
+      background: var(--green-subtle);
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: var(--green-400);
+    }
+    .ms-sheet__name { font-size: 16px; font-weight: 800; color: var(--white); }
+    .ms-sheet__price { font-size: 13.5px; color: var(--green-400); font-weight: 700; margin-top: 2px; }
+    .ms-sheet__country {
+      font-size: 13.5px; color: var(--gray-200);
+      background: var(--bg-3); border: 1px solid var(--gray-800); border-radius: var(--radius);
+      padding: 11px 14px; margin-bottom: 14px;
+    }
 
-  /* Поиск */
-  .ms-search { margin-top: 16px; }
+    .ms-success { text-align: center; padding: 8px 0 4px; }
+    .ms-success__icon { font-size: 44px; margin-bottom: 8px; }
+    .ms-success__title { font-size: 16px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+    .ms-success__text { font-size: 13.5px; color: var(--gray-200); line-height: 1.55; }
+    .ms-success__text b { color: var(--green-400); }
+    .ms-success__steps {
+      text-align: left; font-size: 13px; color: var(--gray-200); line-height: 1.7;
+      background: var(--bg-3); border: 1px solid var(--gray-800); border-radius: var(--radius);
+      padding: 12px 14px; margin: 12px 0 4px;
+    }
+    .ms-success__steps span { color: var(--green-400); font-weight: 800; }
 
-  /* Категории */
-  .ms-cats {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 2px 0 4px;
-    margin: 14px 0 16px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .ms-cats::-webkit-scrollbar { display: none; }
-  .ms-chip {
-    flex: 0 0 auto;
-    padding: 8px 15px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    background: var(--surface);
-    border: 1px solid var(--gray-800);
-    color: var(--gray-300);
-    transition: all 0.15s ease;
-  }
-  .ms-chip:active { opacity: 0.8; }
-  .ms-chip--active {
-    background: var(--green-subtle);
-    border-color: var(--green-600);
-    color: var(--green-300);
-  }
+    .ms-hint { font-size: 12.5px; color: var(--gray-400); text-align: center; margin-top: 10px; line-height: 1.5; }
 
-  /* Отступ перед каталогом */
-  .ms-catalog { padding-top: 24px; }
-
-  /* Пусто */
-  .ms-empty { text-align: center; color: var(--gray-500); font-size: 14px; padding: 48px 0; }
-
-  /* ===== Экран заказов ===== */
-  .ms-screen { padding-top: 20px; }
-  .ms-order {
-    background: var(--surface);
-    border: 1px solid var(--gray-800);
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .ms-order__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .ms-order__service { font-size: 15px; font-weight: 700; color: var(--white); }
-  .ms-order__meta { font-size: 12.5px; color: var(--gray-300); margin-top: 4px; line-height: 1.5; }
-  .ms-order__price { font-size: 14px; font-weight: 800; color: var(--green-400); white-space: nowrap; }
-  .ms-order__foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gray-800);
-  }
-  .ms-order__phone { font-size: 13.5px; color: var(--gray-100); }
-  .ms-order__phone b { color: var(--green-400); }
-  .ms-order__cancel { font-size: 12.5px; color: var(--red); font-weight: 600; padding: 4px 0; }
-  .ms-status { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; display: inline-block; }
-  .ms-status--pending { background: rgba(234, 179, 8, 0.1); color: var(--yellow); }
-  .ms-status--completed { background: var(--green-subtle); color: var(--green-400); }
-  .ms-status--rejected { background: rgba(239, 68, 68, 0.12); color: #f87171; }
-
-  /* ===== Bottom sheet ===== */
-  .ms-overlay {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 50;
-    display: flex; align-items: flex-end; justify-content: center;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
-  }
-  .ms-overlay--open { opacity: 1; pointer-events: auto; }
-  .ms-sheet {
-    background: var(--bg-2);
-    border: 1px solid var(--gray-800);
-    border-bottom: none;
-    border-radius: 18px 18px 0 0;
-    max-width: 640px; width: 100%;
-    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
-    transform: translateY(100%);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 88vh; overflow-y: auto;
-  }
-  .ms-overlay--open .ms-sheet { transform: translateY(0); }
-  .ms-sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: var(--gray-750); margin: 0 auto 14px; }
-  .ms-sheet__service { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .ms-sheet__logo {
-    width: 48px; height: 48px; border-radius: 12px; flex: 0 0 auto;
-    background: var(--green-subtle);
-    border: 1px solid rgba(16, 185, 129, 0.22);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 800; color: var(--green-400);
-  }
-  .ms-sheet__name { font-size: 16px; font-weight: 800; color: var(--white); }
-  .ms-sheet__price { font-size: 13.5px; color: var(--green-400); font-weight: 700; margin-top: 2px; }
-
-  .ms-field { margin-bottom: 14px; }
-  .ms-field label {
-    display: block; font-size: 12px; font-weight: 600; color: var(--gray-300);
-    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px;
-  }
-  .ms-field select {
-    width: 100%;
-    background: var(--bg-3);
-    border: 1px solid var(--gray-800);
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    font-size: 14px;
-    color: var(--white);
-    font-family: inherit;
-    outline: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239fa1a1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-  }
-  .ms-field select:focus { border-color: var(--green-600); }
-
-  .ms-success { text-align: center; padding: 8px 0 4px; }
-  .ms-success__icon { font-size: 44px; margin-bottom: 8px; }
-  .ms-success__title { font-size: 16px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
-  .ms-success__text { font-size: 13.5px; color: var(--gray-200); line-height: 1.55; }
-  .ms-success__text b { color: var(--green-400); }
-  .ms-success__steps {
-    text-align: left; font-size: 13px; color: var(--gray-200); line-height: 1.7;
-    background: var(--bg-3); border: 1px solid var(--gray-800); border-radius: var(--radius);
-    padding: 12px 14px; margin: 12px 0 4px;
-  }
-  .ms-success__steps span { color: var(--green-400); font-weight: 800; }
-
-  .ms-hint { font-size: 12.5px; color: var(--gray-400); text-align: center; margin-top: 10px; line-height: 1.5; }
-
-  /* ===== Toast ===== */
-  .ms-toast {
-    position: fixed; left: 50%; bottom: 24px;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--surface-3); color: var(--white);
-    font-size: 13.5px; font-weight: 600;
-    padding: 11px 18px; border-radius: 10px;
-    z-index: 100; opacity: 0; transition: all 0.25s ease;
-    max-width: 90vw; text-align: center; box-shadow: var(--shadow-lg);
-  }
-  .ms-toast--on { transform: translateX(-50%) translateY(0); opacity: 1; }
-  .ms-toast--err { background: #3f1d1d; color: #fca5a5; }
-</style>
+    /* ===== Toast ===== */
+    .ms-toast {
+      position: fixed; left: 50%; bottom: 24px;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface-3); color: var(--white);
+      font-size: 13.5px; font-weight: 600;
+      padding: 11px 18px; border-radius: 10px;
+      z-index: 9999; opacity: 0; transition: all 0.25s ease;
+      max-width: 90vw; text-align: center; box-shadow: var(--shadow-lg);
+    }
+    .ms-toast--on { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .ms-toast--err { background: #3f1d1d; color: #fca5a5; }
+  </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="container header__inner">
-    <a class="logo" onclick="return false">
-      <span class="logo__text">SMS<span class="logo__accent">Light</span></span>
-    </a>
-    <button class="ms-orders-btn" onclick="Shop.toggleOrders()">
-      📋 Мои заказы <span id="ordersCount" class="ms-orders-count"></span>
-    </button>
+  <!-- Preloader -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo">
+      SMS<span class="green">Light</span>
+    </div>
+    <div class="preloader__bar"></div>
+    <div class="preloader__hint">Загружаем лучшие номера...</div>
   </div>
-</header>
+  <script>
+    (function() {
+      var preloader = document.getElementById('preloader');
+      function hidePreloader() {
+        preloader.classList.add('preloader--hide');
+        setTimeout(function() { preloader.style.display = 'none'; }, 600);
+      }
+      var elapsed = performance.now();
+      if (elapsed > 2000) { hidePreloader(); }
+      else { setTimeout(hidePreloader, Math.max(600, 1800 - elapsed)); }
+    })();
+  </script>
 
-<div id="app" class="container ms-app">
-  <div id="msBanner" class="ms-banner" style="display:none"></div>
+  <!-- Header (как на сайте) -->
+  <header class="header">
+    <div class="container header__inner">
+      <a href="#" class="logo" onclick="return false">
+        <span class="logo__text">SMS<span class="logo__accent">Light</span></span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="#" class="nav__link" onclick="return false">Главная</a>
+        <a href="#services" class="nav__link">Услуги</a>
+        <a href="faq.html" class="nav__link">FAQ</a>
+        <a href="reviews.html" class="nav__link">Отзывы</a>
+        <a href="#" class="nav__link" onclick="Profile.openChat();return false">Чат</a>
+        <a href="#" class="nav__link" onclick="Profile.toggleDrawer();return false">Мои заказы</a>
 
-  <div class="search-box ms-search">
-    <svg class="search-box__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.35-4.35"></path></svg>
-    <input id="msSearch" class="search-box__input" type="search" placeholder="Поиск сервиса…" autocomplete="off" oninput="Shop.applyFilters()">
+          <span id="navAuth">
+            <a href="login.html" class="nav__link nav__link--login">Войти</a>
+            <a href="register.html" class="btn btn--sm">Регистрация</a>
+          </span>
+      </nav>
+      <div class="header__actions">
+        <select class="currency-select" id="currencySelect" aria-label="Currency">
+          <option value="RUB" selected>₽ RUB</option>
+          <option value="USD">$ USD</option>
+        </select>
+        <a href="https://t.me/REXNCER" target="_blank" rel="noopener" class="telegram-btn" aria-label="Написать в Telegram" title="Написать в Telegram">
+          <svg width="17" height="17" viewBox="0 0 496 512" fill="currentColor"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm121.8 169.9l-40.7 191.8c-3 13.6-11.1 16.9-22.4 10.5l-62-45.7-29.9 28.8c-3.3 3.3-6.1 6.1-12.5 6.1l4.4-63.1 114.9-103.8c5-4.4-1.1-6.9-7.7-2.5l-142 89.4-61.2-19.1c-13.3-4.2-13.6-13.3 2.8-19.7l239.1-92.2c11.1-4 20.8 2.7 17.2 19.5z"/></svg>
+        </a>
+        <button class="theme-toggle" id="themeToggle" onclick="Auth.toggleTheme()" aria-label="Сменить тему">
+          <svg class="theme-toggle__sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="theme-toggle__moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <span id="userMenu"></span>
+        <button class="burger" id="burger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+  <!-- Демо-баннер (показывается только вне Telegram, через Shop.showBanner) -->
+  <div class="container">
+    <div id="msBanner" class="ms-banner" style="display:none"></div>
   </div>
 
-  <div id="msCats" class="ms-cats"></div>
+  <!-- Hero Section (как на сайте) -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero__content">
+        <div class="hero__left">
+          <div class="hero__badge">
+            <span class="hero__badge-dot"></span>
+            Номера для 200+ сервисов
+          </div>
+          <h1 class="hero__title">
+            Виртуальные номера
+            <span class="hero__accent">Моментально</span>
+          </h1>
+          <p class="hero__desc">
+            Купить виртуальные номера для регистрации в Telegram, WhatsApp и 200+ сервисах. Быстро, анонимно, безопасно.
+          </p>
 
-  <section class="popular ms-catalog">
-    <h2 class="popular__title">Каталог</h2>
-    <div id="msGrid" class="popular__grid"></div>
-    <div id="msEmpty" class="ms-empty" style="display:none">Ничего не найдено 🙁</div>
+          <!-- Search -->
+          <div class="search-box">
+            <svg class="search-box__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" id="serviceSearch" class="search-box__input"
+              placeholder="Поиск сервиса... Telegram, WhatsApp, Instagram..."
+              autocomplete="off">
+            <div class="search-box__dropdown" id="heroSearchDropdown"></div>
+          </div>
+
+          <!-- Stats -->
+          <div class="hero__stats">
+            <div class="hero__stat">
+              <div class="hero__stat-num"><em>200+</em> сервисов</div>
+              <div class="hero__stat-label">Telegram, WhatsApp, Instagram…</div>
+            </div>
+            <div class="hero__stat">
+              <div class="hero__stat-num"><em>30+</em> стран</div>
+              <div class="hero__stat-label">Номера в наличии</div>
+            </div>
+            <div class="hero__stat">
+              <div class="hero__stat-num"><em>10</em> секунд</div>
+              <div class="hero__stat-label">До получения кода</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone mockup -->
+        <div class="hero__visual">
+          <div class="phone">
+            <div class="phone__screen">
+              <div class="phone__notch"></div>
+              <div class="phone__appbar">
+                <span class="phone__appbar-name">SMS<span>Light</span></span>
+                <span class="phone__appbar-ok">● Онлайн</span>
+              </div>
+              <div class="phone__chat">
+                <div class="phone__msg phone__msg--in">Номер готов: +7 999 123-45-67</div>
+                <div class="phone__msg phone__msg--in">Ожидаем SMS с кодом…</div>
+                <div class="phone__msg phone__msg--code">4 3 2 1</div>
+                <div class="phone__msg phone__msg--out">Готово! Код получен ✅</div>
+                <div class="phone__typing"><i></i><i></i><i></i></div>
+              </div>
+              <div class="phone__status">Оплата подтверждена · баланс активен</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
-</div>
 
-<!-- Orders screen -->
-<div id="ordersScreen" class="container ms-screen" style="display:none">
-  <h2 class="popular__title">📋 Мои заказы</h2>
-  <div id="ordersList"></div>
-</div>
+  <!-- Popular services: quick choice cards -->
+  <section class="popular reveal" id="popular">
+    <div class="container">
+      <div class="popular__header">
+        <h2 class="popular__title">Популярные сервисы</h2>
+        <span class="popular__count">Нажмите на сервис, чтобы выбрать его</span>
+      </div>
+      <div class="popular__grid" id="popularGrid"><!-- filled by JS --></div>
+    </div>
+  </section>
 
-<!-- Bottom sheet -->
-<div id="orderOverlay" class="ms-overlay" onclick="if(event.target===this)Shop.closeSheet()">
-  <div class="ms-sheet">
-    <div class="ms-sheet__handle"></div>
-    <div id="msSheetBody"></div>
+  <!-- Order Section -->
+  <section class="catalog reveal" id="services">
+    <div class="container">
+      <div class="catalog__header">
+        <h2 class="catalog__title">Виртуальные номера и готовые аккаунты Telegram</h2>
+        <span class="catalog__count" id="serviceCount">Выберите сервис и страну</span>
+      </div>
+
+      <!-- Mode Tabs -->
+      <div class="order-tabs">
+        <button class="order-tab active" data-mode="virtual">Виртуальные номера</button>
+        <button class="order-tab" data-mode="telegram">Номера Telegram</button>
+      </div>
+
+      <!-- Panel: Virtual Numbers -->
+      <div class="order-panel active" id="orderPanel-virtual">
+        <div class="order-form">
+          <div class="order-field">
+            <div class="order-field__label">Сервис</div>
+            <div class="order-select" id="svcSelectWrap">
+              <div class="order-select__input-wrap">
+                <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="order-select__input" id="svcSearchInput" placeholder="Выберите сервис" autocomplete="off">
+              </div>
+              <div class="order-select__dropdown" id="svcDropdown">
+                <!-- filled by JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="order-field">
+            <div class="order-field__label">Страна</div>
+            <div class="order-select" id="countrySelectWrap">
+              <div class="order-select__input-wrap">
+                <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="order-select__input" id="countrySearchInput" placeholder="Выберите сервис для просмотра доступных стран" autocomplete="off" disabled>
+              </div>
+              <div class="order-select__dropdown" id="countryDropdown">
+                <!-- filled by JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="order-summary" id="orderSummary" style="display:none">
+            <div class="order-summary__price">
+              <span class="order-summary__label">Стоимость:</span>
+              <span class="order-summary__value" id="orderPriceValue">—</span>
+            </div>
+            <button class="btn btn--lg btn--full" onclick="Order.buy()">Купить номер</button>
+            <div class="order-summary__info" id="orderBuyInfo"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Telegram Numbers -->
+      <div class="order-panel" id="orderPanel-telegram">
+        <div class="order-form">
+          <div class="order-field">
+            <div class="order-field__label">Тип номера</div>
+            <div class="order-subtabs" id="tgTypeTabs">
+              <button class="order-subtab active" data-type="ready">Готовые номера Telegram</button>
+              <button class="order-subtab" data-type="physical">Физ.номера</button>
+              <button class="order-subtab" data-type="aged">Номера с отлежкой</button>
+            </div>
+          </div>
+
+          <div class="order-field">
+            <div class="order-field__label">Страна</div>
+            <div class="order-select" id="tgCountrySelectWrap">
+              <div class="order-select__input-wrap">
+                <svg class="order-select__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="order-select__input" id="tgCountryInput" placeholder="Выберите страну" autocomplete="off">
+              </div>
+              <div class="order-select__dropdown" id="tgCountryDropdown">
+                <!-- filled by JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="order-summary" id="tgOrderSummary" style="display:none">
+            <div class="order-summary__price">
+              <span class="order-summary__label">Стоимость:</span>
+              <span class="order-summary__value" id="tgOrderPriceValue">—</span>
+            </div>
+            <button class="btn btn--lg btn--full" onclick="Order.buyTelegram()">Купить аккаунт</button>
+            <div class="order-summary__info" id="tgOrderBuyInfo"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features reveal">
+    <div class="container">
+      <div class="features__grid anim-cards">
+        <div class="feature-card reveal-item">
+          <div class="feature-card__icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <h4 class="feature-card__title">Моментальная доставка</h4>
+          <p class="feature-card__desc">Получите номер сразу после подтверждения оплаты</p>
+        </div>
+        <div class="feature-card reveal-item">
+          <div class="feature-card__icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h4 class="feature-card__title">Безопасная оплата</h4>
+          <p class="feature-card__desc">Оплата через Fride — ваши данные остаются скрытыми</p>
+        </div>
+        <div class="feature-card reveal-item">
+          <div class="feature-card__icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h4 class="feature-card__title">30+ стран</h4>
+          <p class="feature-card__desc">Номера РФ, США, Европы и Азии</p>
+        </div>
+        <div class="feature-card reveal-item">
+          <div class="feature-card__icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h4 class="feature-card__title">Лучшие цены</h4>
+          <p class="feature-card__desc">От 0.35 USD / 30 ₽ за номер</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Отзывы -->
+  <section class="testimonials reveal" id="testimonials">
+    <div class="container">
+      <div class="testimonials__header">
+        <h2 class="testimonials__title">Отзывы клиентов</h2>
+        <a href="reviews.html" class="testimonials__all">Читать все отзывы →</a>
+      </div>
+      <div class="testimonials__grid anim-cards" id="testimonialsGrid">
+        <div class="testimonials__loading">Загрузка отзывов...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer reveal">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <span class="footer__logo">SMS<span class="logo__accent">Light</span></span>
+          <p class="footer__tagline">Купить виртуальные номера быстро и просто</p>
+        </div>
+        <div class="footer__copy">&copy; 2026 SMS Light. Все права защищены.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/chat-server.js"></script>
+  <script src="js/profile.js"></script>
+
+  <script>
+    // === Order System (как на сайте; «Купить» открывает bottom-sheet мини-маркета) ===
+    window.Order = (function() {
+      var selectedService = null;
+      var selectedTelegramType = 'ready';
+      var selectedCountry = null;
+      var tgSelectedCountry = null;
+      var currentMode = 'virtual';
+      var svcDropdownOpen = false;
+      var countryDropdownOpen = false;
+      var tgCountryDropdownOpen = false;
+
+      // ======== Popular services cards (под hero) ========
+      var POPULAR = ['telegram', 'whatsapp', 'instagram', 'vk', 'tiktok',
+                     'x-twitter', 'discord', 'steam', 'binance', 'chatgpt',
+                     'netflix', 'google'];
+
+      function renderPopular() {
+        var grid = document.getElementById('popularGrid');
+        if (!grid || typeof Data === 'undefined') return;
+        var items = [];
+        for (var i = 0; i < POPULAR.length; i++) {
+          var s = Data.getService(POPULAR[i]);
+          if (s) items.push(s);
+        }
+        items.sort(function(a, b) {
+          return String(a.name).localeCompare(String(b.name), 'ru');
+        });
+        var html = '';
+        for (var j = 0; j < items.length; j++) {
+          var sv = items[j];
+          html +=
+            '<div class="popular-card reveal-item" style="animation-delay:' + (j * 0.03) + 's" onclick="Order.pickPopular(\'' + sv.id + '\')">' +
+              '<span class="popular-card__logo">' + getLogo(sv.id) + '</span>' +
+              '<span class="popular-card__body">' +
+                '<span class="popular-card__name">' + esc(sv.name) + '</span>' +
+                '<span class="popular-card__price">' + fmtPrice(sv.price) + '</span>' +
+              '</span>' +
+              '<span class="popular-card__pick" aria-hidden="true">→</span>' +
+            '</div>';
+        }
+        grid.innerHTML = html;
+      }
+
+      function pickPopular(id) {
+        setMode('virtual');
+        pickService(id);
+        var el = document.getElementById('services');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // ======== Mode Switching ========
+      function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.order-tab').forEach(function(t) {
+          t.classList.toggle('active', t.dataset.mode === mode);
+        });
+        document.querySelectorAll('.order-panel').forEach(function(p) {
+          p.classList.toggle('active', p.id === 'orderPanel-' + mode);
+        });
+        if (mode === 'virtual') {
+          initServiceDropdown();
+          document.getElementById('serviceCount').textContent = 'Выберите сервис и страну';
+        } else {
+          initTgCountryDropdown();
+          document.getElementById('serviceCount').textContent = 'Выберите тип и страну';
+        }
+      }
+
+      // ======== Searchable Dropdown: Services ========
+      function initServiceDropdown() {
+        var input = document.getElementById('svcSearchInput');
+        var dd = document.getElementById('svcDropdown');
+        if (!input || !dd) return;
+        renderSvcDropdown('');
+
+        input.addEventListener('focus', function() {
+          renderSvcDropdown(this.value);
+          dd.classList.add('open');
+          svcDropdownOpen = true;
+        });
+        input.addEventListener('input', function() {
+          renderSvcDropdown(this.value);
+          dd.classList.add('open');
+          svcDropdownOpen = true;
+        });
+        input.addEventListener('blur', function() {
+          setTimeout(function() { dd.classList.remove('open'); svcDropdownOpen = false; }, 200);
+        });
+      }
+
+      function renderSvcDropdown(query) {
+        var dd = document.getElementById('svcDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var services = Data.getServices();
+        var html = '';
+        for (var i = 0; i < services.length; i++) {
+          var s = services[i];
+          var match = !query || s.name.toLowerCase().indexOf(query) !== -1 || s.id.indexOf(query) !== -1;
+          if (!match) continue;
+          var selected = selectedService && selectedService.id === s.id ? ' class="dd-item--selected"' : '';
+          html += '<div' + selected + ' data-id="' + s.id + '" data-price="' + s.price + '" onmousedown="Order.pickService(\'' + s.id + '\')">' +
+            '<span class="dd-item__logo">' + getLogo(s.id) + '</span>' +
+            '<span class="dd-item__name">' + esc(s.name) + '</span>' +
+            '<span class="dd-item__price">' + fmtPrice(s.price) + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Ничего не найдено</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickService(id) {
+        selectedService = Data.getService(id);
+        if (!selectedService) return;
+
+        var input = document.getElementById('svcSearchInput');
+        input.value = selectedService.name;
+        document.getElementById('svcDropdown').classList.remove('open');
+        svcDropdownOpen = false;
+
+        initCountryDropdown();
+        showSummary('order');
+      }
+
+      // ======== Searchable Dropdown: Countries (Virtual) ========
+      function initCountryDropdown() {
+        var input = document.getElementById('countrySearchInput');
+        var dd = document.getElementById('countryDropdown');
+        if (!input || !dd) return;
+
+        input.disabled = false;
+        input.placeholder = 'Выберите страну';
+        renderCountryDropdown('');
+
+        input.onfocus = function() {
+          renderCountryDropdown(this.value);
+          dd.classList.add('open');
+          countryDropdownOpen = true;
+        };
+        input.oninput = function() {
+          renderCountryDropdown(this.value);
+          dd.classList.add('open');
+          countryDropdownOpen = true;
+        };
+        input.onblur = function() {
+          setTimeout(function() { dd.classList.remove('open'); countryDropdownOpen = false; }, 200);
+        };
+      }
+
+      function renderCountryDropdown(query) {
+        var dd = document.getElementById('countryDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var countries = Data.getCountries();
+        var html = '';
+        for (var i = 0; i < countries.length; i++) {
+          var c = countries[i];
+          if (query && c.name.toLowerCase().indexOf(query) === -1) continue;
+          var selected = selectedCountry === c.name ? ' class="dd-item--selected"' : '';
+          var iso = Data.getCountryIso(c.name);
+          var flagHtml = iso ? '<img src="https://flagcdn.com/24x18/' + iso + '.png" alt="" class="dd-item__flag-img" width="24" height="18">' : '🌍';
+          html += '<div' + selected + ' data-country="' + escAttr(c.name) + '" onmousedown="Order.pickCountry(\'' + escAttr(c.name) + '\')">' +
+            flagHtml +
+            '<span class="dd-item__name">' + esc(c.name) + '</span>' +
+            '<span class="dd-item__code">' + c.code + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Нет доступных стран</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickCountry(country) {
+        selectedCountry = country;
+        var input = document.getElementById('countrySearchInput');
+        var countries = Data.getCountries();
+        var found = null;
+        for (var i = 0; i < countries.length; i++) {
+          if (countries[i].name === country) { found = countries[i]; break; }
+        }
+        input.value = found ? found.name + ' (' + found.code + ')' : country;
+        document.getElementById('countryDropdown').classList.remove('open');
+        countryDropdownOpen = false;
+        showSummary('order');
+      }
+
+      // ======== Summary (Price + Buy) ========
+      function showSummary(panel) {
+        if (panel === 'order') {
+          if (!selectedService || !selectedCountry) return;
+          document.getElementById('orderSummary').style.display = '';
+          document.getElementById('orderPriceValue').textContent = fmtPrice(selectedService.price);
+          document.getElementById('orderBuyInfo').textContent = '';
+          var isoForSummary = Data.getCountryIso(selectedCountry);
+          var flagImgSummary = isoForSummary ? '<img src="https://flagcdn.com/24x18/' + isoForSummary + '.png" alt="" style="width:20px;height:15px;vertical-align:middle;border-radius:2px">' : '🌍';
+          document.getElementById('serviceCount').innerHTML = esc(selectedService.name) + ' — ' + flagImgSummary + ' ' + esc(selectedCountry);
+        } else {
+          if (!tgSelectedCountry) return;
+          document.getElementById('tgOrderSummary').style.display = '';
+          document.getElementById('tgOrderPriceValue').textContent = fmtPrice(49);
+          document.getElementById('tgOrderBuyInfo').textContent = '';
+        }
+      }
+
+      // ======== Buy: Virtual Number ========
+      // В мини-маркете списания баланса нет — оплата подтверждается вручную:
+      // открываем bottom-sheet с шагами оплаты через Telegram.
+      function buy() {
+        if (!selectedService || !selectedCountry) {
+          document.getElementById('orderBuyInfo').textContent = 'Выберите сервис и страну';
+          return;
+        }
+        Shop.openSheet({
+          id: selectedService.id,
+          name: selectedService.name,
+          price: selectedService.price,
+          type: 'virtual'
+        }, selectedCountry);
+      }
+
+      // ======== Telegram Types ========
+      function selectTelegramType(type) {
+        selectedTelegramType = type;
+        document.querySelectorAll('.order-subtab').forEach(function(t) {
+          t.classList.toggle('active', t.dataset.type === type);
+        });
+        tgSelectedCountry = null;
+        initTgCountryDropdown();
+        document.getElementById('tgOrderSummary').style.display = 'none';
+      }
+
+      // ======== Searchable Dropdown: Countries (Telegram) ========
+      function initTgCountryDropdown() {
+        var input = document.getElementById('tgCountryInput');
+        var dd = document.getElementById('tgCountryDropdown');
+        if (!input || !dd) return;
+
+        input.disabled = false;
+        input.value = '';
+        input.placeholder = 'Выберите страну';
+        renderTgCountryDropdown('');
+
+        input.onfocus = function() {
+          renderTgCountryDropdown(this.value);
+          dd.classList.add('open');
+          tgCountryDropdownOpen = true;
+        };
+        input.oninput = function() {
+          renderTgCountryDropdown(this.value);
+          dd.classList.add('open');
+          tgCountryDropdownOpen = true;
+        };
+        input.onblur = function() {
+          setTimeout(function() { dd.classList.remove('open'); tgCountryDropdownOpen = false; }, 200);
+        };
+      }
+
+      function renderTgCountryDropdown(query) {
+        var dd = document.getElementById('tgCountryDropdown');
+        if (!dd) return;
+        query = (query || '').toLowerCase().trim();
+        var countries = Data.getCountries();
+        var html = '';
+        for (var i = 0; i < countries.length; i++) {
+          var c = countries[i];
+          if (query && c.name.toLowerCase().indexOf(query) === -1) continue;
+          var iso = Data.getCountryIso(c.name);
+          var flagHtml = iso ? '<img src="https://flagcdn.com/24x18/' + iso + '.png" alt="" class="dd-item__flag-img" width="24" height="18">' : '🌍';
+          html += '<div data-country="' + escAttr(c.name) + '" onmousedown="Order.pickTgCountry(\'' + escAttr(c.name) + '\')">' +
+            flagHtml +
+            '<span class="dd-item__name">' + esc(c.name) + '</span>' +
+            '<span class="dd-item__code">' + c.code + '</span>' +
+          '</div>';
+        }
+        if (!html) html = '<div class="dd-empty">Нет доступных стран</div>';
+        dd.innerHTML = html;
+      }
+
+      function pickTgCountry(country) {
+        tgSelectedCountry = country;
+        var input = document.getElementById('tgCountryInput');
+        var countries = Data.getCountries();
+        var found = null;
+        for (var i = 0; i < countries.length; i++) {
+          if (countries[i].name === country) { found = countries[i]; break; }
+        }
+        input.value = found ? found.name + ' (' + found.code + ')' : country;
+        document.getElementById('tgCountryDropdown').classList.remove('open');
+        tgCountryDropdownOpen = false;
+        showSummary('tg');
+      }
+
+      // ======== Buy: Telegram ========
+      function buyTelegram() {
+        if (!tgSelectedCountry) {
+          document.getElementById('tgOrderBuyInfo').textContent = 'Выберите страну';
+          return;
+        }
+        var types = Data.getTelegramTypes();
+        var typeName = 'Готовые номера Telegram';
+        for (var i = 0; i < types.length; i++) {
+          if (types[i].id === selectedTelegramType) typeName = types[i].name;
+        }
+        Shop.openSheet({
+          id: 'telegram',
+          name: typeName,
+          price: 49,
+          type: 'telegram'
+        }, tgSelectedCountry);
+      }
+
+      // ======== Utilities ========
+      function getLogo(id) {
+        var map = {
+          telegram:'TG', whatsapp:'WA', viber:'VB', discord:'DC', signal:'SG',
+          wechat:'WC', line:'LN', skype:'SK', instagram:'IG', facebook:'FB',
+          'x-twitter':'X', tiktok:'TK', snapchat:'SC', linkedin:'LI',
+          pinterest:'PI', 'telegram-premium':'TP', binance:'BN', bybit:'BB',
+          huobi:'HB', okx:'OK', coinbase:'CB', kraken:'KR', gateio:'GT',
+          kucoin:'KC', mexc:'MX', '888poker':'88', ggpoker:'GG',
+          'global-poker':'GP', pokerstars:'PS', partypoker:'PP', bet365:'B3',
+          '1xbet':'1X', 'william-hill':'WH', draftkings:'DK', fanduel:'FD',
+          sberbank:'SB', tinkoff:'TB', raiffeisen:'RZ', paypal:'PP',
+          wise:'WS', revolut:'RV', webmoney:'WM', qiwi:'QI', yoomoney:'YM',
+          netflix:'NF', spotify:'SF', twitch:'TW', steam:'SM', 'epic-games':'EG',
+          xbox:'XB', playstation:'PS', 'riot-games':'RG', ubisoft:'UB',
+          minecraft:'MC', pubg:'PG', 'free-fire':'FF', booking:'BC',
+          uber:'UB', bolt:'BT', airbnb:'AB', avito:'AV', olx:'OX',
+          craigslist:'CL', google:'GO', microsoft:'MS', apple:'AP',
+          '22bet':'2B', '2dehands':'2H', aol:'AO', adidas:'AD', adobe:'AE',
+          aliexpress:'AX', alibaba:'AL', audi:'AU', 'battle-net':'BA',
+          bing:'BI', bumble:'BU', chatgpt:'CH', citymobil:'CM', dhl:'DH',
+          derik:'DR', doordash:'DD', ebay:'EB', fiverr:'FV', foodpanda:'FP',
+          gett:'GE', glovo:'GL', happn:'HP', hinge:'HI', icq:'IC',
+          indeed:'IN', kakaotalk:'KT', 'kontakt-bar':'KB', linode:'LD',
+          mamba:'MB', nike:'NK', okcupid:'OC', openai:'OA',
+          perekrestok:'PK', 'plenty-of-fish':'PF', protonmail:'PM',
+          pyaterochka:'PY', qq:'QQ', rambler:'RB', skout:'SO',
+          tinder:'TD', twilio:'TL', vk:'VK', wargaming:'WG',
+          wolt:'WL', yahoo:'YH', youtube:'YT', zara:'ZA'
+        };
+        return map[id] || (id.charAt(0).toUpperCase() + id.charAt(1).toUpperCase());
+      }
+
+      function esc(str) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(str));
+        return d.innerHTML;
+      }
+
+      function escAttr(str) {
+        return str.replace(/'/g, '\\\'');
+      }
+
+      function fmtPrice(price) {
+        return window._currency === 'USD'
+          ? '$' + (price * 0.011).toFixed(2)
+          : price + ' ₽';
+      }
+
+      function refreshPrices() {
+        if (svcDropdownOpen) renderSvcDropdown(document.getElementById('svcSearchInput').value);
+        if (countryDropdownOpen) renderCountryDropdown(document.getElementById('countrySearchInput').value);
+        if (tgCountryDropdownOpen) renderTgCountryDropdown(document.getElementById('tgCountryInput').value);
+        var pv = document.getElementById('orderPriceValue');
+        if (pv && selectedService) pv.textContent = fmtPrice(selectedService.price);
+        var pt = document.getElementById('tgOrderPriceValue');
+        if (pt) pt.textContent = fmtPrice(49);
+        document.querySelectorAll('#svcDropdown .dd-item__price').forEach(function(el) {
+          var parent = el.parentNode;
+          if (parent && parent.dataset && parent.dataset.price) {
+            el.textContent = fmtPrice(parseFloat(parent.dataset.price));
+          }
+        });
+        renderPopular();
+      }
+
+      // ======== Init ========
+      function init() {
+        renderPopular();
+        initServiceDropdown();
+        initTgCountryDropdown();
+      }
+
+      function bindTabs() {
+        document.querySelectorAll('.order-tab').forEach(function(t) {
+          t.onclick = function() { setMode(this.dataset.mode); };
+        });
+        document.querySelectorAll('.order-subtab').forEach(function(t) {
+          t.onclick = function() { selectTelegramType(this.dataset.type); };
+        });
+      }
+
+      return {
+        init: init,
+        bindTabs: bindTabs,
+        setMode: setMode,
+        pickService: pickService,
+        pickCountry: pickCountry,
+        pickTgCountry: pickTgCountry,
+        pickPopular: pickPopular,
+        buy: buy,
+        buyTelegram: buyTelegram,
+        selectTelegramType: selectTelegramType,
+        refreshPrices: refreshPrices
+      };
+    })();
+  </script>
+
+  <script>
+    // === Init order ===
+    document.addEventListener('DOMContentLoaded', function() {
+      Order.bindTabs();
+      Order.init();
+    });
+  </script>
+
+  <script>
+    // === Currency switcher ===
+    (function() {
+      var RATE = 0.011;
+      var select = document.getElementById('currencySelect');
+      if (!select) return;
+
+      window._currency = 'RUB';
+
+      var saved = document.cookie.replace(/(?:(?:^|.*;\s*)currency\s*=\s*([^;]*).*$)|^.*$/, '$1');
+      if (saved === 'USD') {
+        select.value = 'USD';
+        window._currency = 'USD';
+      }
+
+      function applyCurrency(currency) {
+        window._currency = currency;
+        if (typeof Order !== 'undefined') {
+          Order.refreshPrices();
+        }
+      }
+
+      select.addEventListener('change', function() {
+        document.cookie = 'currency=' + this.value + '; path=/; max-age=86400';
+        applyCurrency(this.value);
+      });
+    })();
+  </script>
+
+  <script>
+    // === Testimonials ===
+    (function() {
+      var grid = document.getElementById('testimonialsGrid');
+      if (!grid || typeof Data === 'undefined') return;
+
+      function renderStars(rating) {
+        var s = '';
+        for (var i = 0; i < 5; i++) s += i < rating ? '<span class="star--filled">★</span>' : '<span class="star--empty">☆</span>';
+        return s;
+      }
+
+      function escHtml(str) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(str));
+        return d.innerHTML;
+      }
+
+      function renderTestimonials() {
+        var reviews = Data.getReviews(6);
+        if (!reviews || reviews.length === 0) { grid.innerHTML = ''; return; }
+
+        var html = '';
+        for (var i = 0; i < reviews.length; i++) {
+          var r = reviews[i];
+          html += '<div class="testimonial-card reveal-item" style="animation-delay:' + (i * 0.08) + 's">' +
+            '<div class="testimonial-card__top">' +
+              '<span class="testimonial-card__author">' + escHtml(r.author) + '</span>' +
+              '<span class="testimonial-card__rating">' + renderStars(r.rating) + '</span>' +
+            '</div>' +
+            '<div class="testimonial-card__service">' + escHtml(r.service) + '</div>' +
+            '<div class="testimonial-card__text">' + escHtml(r.text) + '</div>' +
+          '</div>';
+        }
+        grid.innerHTML = html;
+      }
+
+      renderTestimonials();
+      if (typeof Data.fetchServerReviews === 'function') {
+        Data.fetchServerReviews(function() { renderTestimonials(); });
+      }
+    })();
+  </script>
+
+  <script src="js/search.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- Bottom sheet -->
+  <div id="orderOverlay" class="ms-overlay" onclick="if(event.target===this)Shop.closeSheet()">
+    <div class="ms-sheet">
+      <div class="ms-sheet__handle"></div>
+      <div id="msSheetBody"></div>
+    </div>
   </div>
-</div>
 
-<div id="toast" class="ms-toast"></div>
+  <div id="toast" class="ms-toast"></div>
 
-<script>
-window.Shop = (function() {
-  'use strict';
+  <script>
+    // === Mini-маркет: Telegram-интеграция + bottom-sheet заказа ===
+    window.Shop = (function() {
+      'use strict';
 
-  var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-  var session = null;
-  var authed = false;
-  var cat = '';
-  var orders = [];
+      var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+      var session = null;
+      var authed = false;
 
-  var SUPPORT = 'REXNCER';
+      var SUPPORT = 'REXNCER';
 
-  // ===== Telegram WebApp =====
-  function initTg() {
-    if (!tg) return;
-    try {
-      tg.ready();
-      tg.expand();
-      tg.setHeaderColor('#080a0a');
-      tg.setBackgroundColor('#080a0a');
-      tg.disableVerticalSwipes && tg.disableVerticalSwipes();
-    } catch (e) {}
-  }
+      // ===== Telegram WebApp =====
+      function initTg() {
+        if (!tg) return;
+        try {
+          tg.ready();
+          tg.expand();
+          tg.setHeaderColor('#080a0a');
+          tg.setBackgroundColor('#080a0a');
+          tg.disableVerticalSwipes && tg.disableVerticalSwipes();
+        } catch (e) {}
+      }
 
-  function haptic(type) {
-    if (!tg || !tg.HapticFeedback) return;
-    try { tg.HapticFeedback.impactOccurred(type || 'light'); } catch (e) {}
-  }
+      function haptic(type) {
+        if (!tg || !tg.HapticFeedback) return;
+        try { tg.HapticFeedback.impactOccurred(type || 'light'); } catch (e) {}
+      }
 
-  function setBackButton(show, fn) {
-    if (!tg || !tg.BackButton) return;
-    try {
-      if (show) { tg.BackButton.onClick(fn); tg.BackButton.show(); }
-      else { tg.BackButton.offClick(fn); tg.BackButton.hide(); }
-    } catch (e) {}
-  }
+      function setBackButton(show, fn) {
+        if (!tg || !tg.BackButton) return;
+        try {
+          if (show) { tg.BackButton.onClick(fn); tg.BackButton.show(); }
+          else { tg.BackButton.offClick(fn); tg.BackButton.hide(); }
+        } catch (e) {}
+      }
 
-  // ===== Auth через Telegram initData =====
-  function initAuth() {
-    var initData = (tg && tg.initData) || '';
-    if (!initData) {
-      showBanner('Демо-просмотр. Чтобы заказывать, откройте маркет через бота в Telegram.');
-      return Promise.resolve(false);
-    }
-    return fetch('/api/tg/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: initData })
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data && data.ok) {
-          session = data.user;
-          authed = true;
-          loadOrders();
-          return true;
+      // ===== Auth через Telegram initData =====
+      function initAuth() {
+        var initData = (tg && tg.initData) || '';
+        if (!initData) {
+          showBanner('Демо-просмотр. Чтобы заказывать, откройте маркет через бота в Telegram.');
+          return Promise.resolve(false);
         }
-        showBanner('Не удалось войти в Telegram. Откройте маркет через бота.');
-        return false;
-      })
-      .catch(function() { showBanner('Сервер недоступен. Попробуйте позже.'); return false; });
-  }
-
-  function showBanner(text) {
-    var el = document.getElementById('msBanner');
-    if (!el) return;
-    el.textContent = text;
-    el.style.display = 'block';
-  }
-
-  // ===== Категории =====
-  function renderCats() {
-    var el = document.getElementById('msCats');
-    var cats = Data.getCategories().sort(function(a, b) { return a.localeCompare(b, 'ru'); });
-    var html = '<button class="ms-chip' + (cat === '' ? ' ms-chip--active' : '') + '" onclick="Shop.setCat(\'\')">Все</button>';
-    for (var i = 0; i < cats.length; i++) {
-      html += '<button class="ms-chip' + (cat === cats[i] ? ' ms-chip--active' : '') + '" onclick="Shop.setCat(\'' + cats[i].replace(/'/g, '\\\'') + '\')">' + esc(cats[i]) + '</button>';
-    }
-    el.innerHTML = html;
-  }
-
-  // ===== Каталог (карточки в стиле сайта — .popular-card) =====
-  function applyFilters() {
-    var q = (document.getElementById('msSearch').value || '').trim().toLowerCase();
-    var services = Data.getServices(cat || null);
-    var items = [];
-    for (var i = 0; i < services.length; i++) {
-      var s = services[i];
-      if (q && s.name.toLowerCase().indexOf(q) === -1) continue;
-      items.push(s);
-    }
-    items.sort(function(a, b) { return String(a.name).localeCompare(String(b.name), 'ru'); });
-
-    var grid = document.getElementById('msGrid');
-    var empty = document.getElementById('msEmpty');
-    var html = '';
-    for (var j = 0; j < items.length; j++) {
-      var sv = items[j];
-      html +=
-        '<div class="popular-card" role="button" tabindex="0" onclick="Shop.openOrder(\'' + sv.id + '\')">' +
-          '<span class="popular-card__logo">' + logo(sv.id) + '</span>' +
-          '<span class="popular-card__body">' +
-            '<span class="popular-card__name">' + esc(sv.name) + '</span>' +
-            '<span class="popular-card__price">' + fmtPrice(sv.price) + '</span>' +
-          '</span>' +
-          '<span class="popular-card__pick" aria-hidden="true">→</span>' +
-        '</div>';
-    }
-    grid.innerHTML = html;
-    empty.style.display = items.length ? 'none' : 'block';
-  }
-
-  function logo(id) {
-    var map = {
-      telegram:'TG', whatsapp:'WA', viber:'VB', discord:'DC', signal:'SG',
-      wechat:'WC', line:'LN', skype:'SK', instagram:'IG', facebook:'FB',
-      'x-twitter':'X', tiktok:'TK', snapchat:'SC', linkedin:'LI',
-      pinterest:'PI', binance:'BN', bybit:'BB', huobi:'HB', okx:'OK',
-      coinbase:'CB', kraken:'KR', gateio:'GT', kucoin:'KC', mexc:'MX',
-      sberbank:'SB', tinkoff:'TB', raiffeisen:'RZ', paypal:'PP', wise:'WS',
-      revolut:'RV', webmoney:'WM', qiwi:'QI', yoomoney:'YM', netflix:'NF',
-      spotify:'SF', twitch:'TW', steam:'SM', 'epic-games':'EG', xbox:'XB',
-      playstation:'PS', 'riot-games':'RG', minecraft:'MC', pubg:'PG',
-      avito:'AV', olx:'OX', google:'GO', microsoft:'MS', apple:'AP',
-      aliexpress:'AX', alibaba:'AL', ebay:'EB', fiverr:'FV', vk:'VK',
-      wargaming:'WG', youtube:'YT', chatgpt:'CH', 'battle-net':'BA',
-      tinder:'TD', 'plenty-of-fish':'PF', okcupid:'OC', mamba:'MB',
-      skout:'SO', happn:'HP', hinge:'HI', bumble:'BU', gett:'GE',
-      uber:'UB', bolt:'BT', airbnb:'AB', booking:'BC', wolt:'WL',
-      glovo:'GL', foodpanda:'FP', dhl:'DH', doordash:'DD', ebay:'EB'
-    };
-    return map[id] || (id.charAt(0).toUpperCase() + id.charAt(1).toUpperCase());
-  }
-
-  function fmtPrice(price) {
-    return price + ' ₽';
-  }
-
-  // ===== Оформление заказа =====
-  function openOrder(id) {
-    var sv = Data.getService(id);
-    if (!sv) return;
-    var countries = Data.getCountries();
-    var options = '';
-    for (var i = 0; i < countries.length; i++) {
-      var c = countries[i];
-      var iso = Data.getCountryIso(c.name);
-      var flag = iso ? c.flag : '🌍';
-      options += '<option value="' + c.name.replace(/"/g, '&quot;') + '">' + flag + ' ' + esc(c.name) + ' (' + c.code + ')</option>';
-    }
-
-    var body = document.getElementById('msSheetBody');
-    body.innerHTML =
-      '<div class="ms-sheet__service">' +
-        '<span class="ms-sheet__logo">' + logo(sv.id) + '</span>' +
-        '<div>' +
-          '<div class="ms-sheet__name">' + esc(sv.name) + '</div>' +
-          '<div class="ms-sheet__price">' + fmtPrice(sv.price) + ' · Виртуальный номер</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="ms-field">' +
-        '<label for="msCountry">Страна</label>' +
-        '<select id="msCountry">' + options + '</select>' +
-      '</div>' +
-      '<button class="btn btn--lg btn--full" id="msBuyBtn" onclick="Shop.submitOrder(\'' + sv.id + '\')">Оформить заказ</button>' +
-      (authed ? '' : '<div class="ms-hint">Доступно только при открытии через бота Telegram</div>');
-
-    document.getElementById('orderOverlay').classList.add('ms-overlay--open');
-    if (!authed) document.getElementById('msBuyBtn').disabled = true;
-  }
-
-  function submitOrder(id) {
-    if (!authed || !session) { toast('Откройте маркет через бота Telegram', true); return; }
-    var sv = Data.getService(id);
-    var country = document.getElementById('msCountry').value;
-    if (!sv || !country) return;
-
-    haptic('medium');
-
-    // Заказ без списания баланса — оплата подтверждается вручную
-    var p = Data.createPurchase(session.id, 'virtual', sv.name, country, sv.price, 'RUB');
-
-    // Уведомляем администратора в чате (как на сайте)
-    notifyAdminOfPurchase(sv.name, country, sv.price);
-    loadOrders();
-
-    var body = document.getElementById('msSheetBody');
-    body.innerHTML =
-      '<div class="ms-success">' +
-        '<div class="ms-success__icon">✅</div>' +
-        '<div class="ms-success__title">Заказ №' + p.id + ' создан</div>' +
-        '<div class="ms-success__text">Сервис: <b>' + esc(sv.name) + '</b> · ' + esc(country) + ' · <b>' + fmtPrice(sv.price) + '</b></div>' +
-        '<div class="ms-success__steps">' +
-          '<div><span>1.</span> Переведите <b>' + fmtPrice(sv.price) + '</b> на аккаунт <b>@' + SUPPORT + '</b>.</div>' +
-          '<div><span>2.</span> В комментарии к переводу укажите <b>№' + p.id + '</b>.</div>' +
-          '<div><span>3.</span> Пришлите скриншот оплаты в чат с ботом.</div>' +
-          '<div><span>4.</span> Номер появится в «Моих заказах» после подтверждения.</div>' +
-        '</div>' +
-        '<button class="btn btn--lg btn--full" onclick="Shop.closeSheet(); Shop.toggleOrders()">📋 Мои заказы</button>' +
-        '<button class="btn btn--lg btn--full btn--outline" style="margin-top:8px" onclick="Shop.closeSheet()">Продолжить покупки</button>' +
-      '</div>';
-    toast('Заказ №' + p.id + ' создан');
-  }
-
-  function notifyAdminOfPurchase(serviceName, country, price) {
-    fetch('/api/users')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var users = (data && data.users) || [];
-        var admin = null;
-        for (var i = 0; i < users.length; i++) {
-          if (users[i] && users[i].is_admin) { admin = users[i]; break; }
-        }
-        if (!admin || !session) return;
-        return fetch('/api/messages/send', {
+        return fetch('/api/tg/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            senderId: session.id,
-            senderName: session.name,
-            receiverId: admin.id,
-            receiverName: 'SMS Light',
-            text: '🛒 Заказ из Telegram: ' + serviceName + ', ' + country + ' — ' + price + ' ₽',
-            created_at: new Date().toISOString(),
-            read: false
+          body: JSON.stringify({ initData: initData })
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.ok) {
+              session = data.user;
+              authed = true;
+              // Ставим сайтовую сессию — шапка, «Личный кабинет», чат и заказы
+              // работают точно так же, как на сайте.
+              if (window.Auth) {
+                Auth.setSession(data.user);
+                Auth.updateNav();
+                Auth.syncUsers();
+              }
+              if (window.ChatServer && ChatServer.startSync) ChatServer.startSync();
+              return true;
+            }
+            showBanner('Не удалось войти в Telegram. Откройте маркет через бота.');
+            return false;
           })
-        });
-      })
-      .catch(function() {});
-  }
+          .catch(function() { showBanner('Сервер недоступен. Попробуйте позже.'); return false; });
+      }
 
-  // ===== Мои заказы =====
-  function loadOrders() {
-    return fetch('/api/purchases')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        orders = (data && data.purchases) || [];
-        renderOrdersCount();
-        return orders;
-      })
-      .catch(function() { return orders; });
-  }
+      function showBanner(text) {
+        var el = document.getElementById('msBanner');
+        if (!el) return;
+        el.textContent = text;
+        el.style.display = 'block';
+      }
 
-  function renderOrdersCount() {
-    var el = document.getElementById('ordersCount');
-    var active = orders.filter(function(o) { return o.status === 'pending'; }).length;
-    el.textContent = active;
-    el.classList.toggle('ms-orders-count--on', active > 0);
-  }
-
-  function toggleOrders() {
-    var scr = document.getElementById('ordersScreen');
-    var app = document.getElementById('app');
-    var showing = scr.style.display !== 'none';
-    if (showing) {
-      scr.style.display = 'none';
-      app.style.display = 'block';
-      setBackButton(false, backToApp);
-      return;
-    }
-    app.style.display = 'none';
-    scr.style.display = 'block';
-    setBackButton(true, backToApp);
-    loadOrders().then(renderOrders);
-  }
-
-  function backToApp() {
-    document.getElementById('ordersScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    setBackButton(false, backToApp);
-  }
-
-  function renderOrders() {
-    var el = document.getElementById('ordersList');
-    if (!orders.length) {
-      el.innerHTML = '<div class="ms-empty">Заказов пока нет. Выберите сервис выше 👆</div>';
-      return;
-    }
-    var html = '';
-    for (var i = 0; i < orders.length; i++) {
-      var o = orders[i];
-      var badge = '';
-      if (o.status === 'pending') badge = '<span class="ms-status ms-status--pending">🟡 Ожидает подтверждения</span>';
-      else if (o.status === 'completed') badge = '<span class="ms-status ms-status--completed">✅ Выполнен</span>';
-      else badge = '<span class="ms-status ms-status--rejected">🔴 Отменён</span>';
-
-      var phone = (o.status === 'completed' && o.phoneNumber)
-        ? '<div class="ms-order__phone">Номер: <b>+' + esc(o.phoneNumber) + '</b> <span style="cursor:pointer;color:var(--green-400);font-weight:700" onclick="Shop.copyPhone(\'' + escAttr(o.phoneNumber) + '\')">копировать</span></div>'
-        : '';
-
-      html +=
-        '<div class="ms-order">' +
-          '<div class="ms-order__head">' +
+      // ===== Bottom sheet =====
+      function openSheet(svc, country) {
+        var body = document.getElementById('msSheetBody');
+        body.innerHTML =
+          '<div class="ms-sheet__service">' +
+            '<span class="ms-sheet__logo">' + logo(svc.id) + '</span>' +
             '<div>' +
-              '<div class="ms-order__service">' + esc(o.serviceName) + '</div>' +
-              '<div class="ms-order__meta">' + esc(o.country || '—') + ' · №' + o.id + ' · ' + fmtDate(o.created_at) + '</div>' +
+              '<div class="ms-sheet__name">' + esc(svc.name) + '</div>' +
+              '<div class="ms-sheet__price">' + fmtPrice(svc.price) + (svc.type === 'telegram' ? '' : ' · Виртуальный номер') + '</div>' +
             '</div>' +
-            '<div class="ms-order__price">' + fmtPrice(o.price) + '</div>' +
           '</div>' +
-          '<div class="ms-order__foot">' + badge +
-            (o.status === 'pending'
-              ? '<button class="ms-order__cancel" onclick="Shop.cancelOrder(' + o.id + ')">Отменить</button>'
-              : '') +
-          '</div>' +
-          phone +
-        '</div>';
-    }
-    el.innerHTML = html;
-  }
+          '<div class="ms-sheet__country">' + Data.getCountryFlag(country) + ' ' + esc(country) + '</div>' +
+          '<button class="btn btn--lg btn--full" id="msBuyBtn" onclick="Shop.confirmOrder(\'' + svc.id.replace(/'/g, '\\\'') + '\',\'' + escAttr(country) + '\',\'' + svc.type + '\')">Оформить заказ</button>' +
+          (authed ? '' : '<div class="ms-hint">Доступно только при открытии через бота Telegram</div>');
 
-  function cancelOrder(id) {
-    fetch('/api/purchases/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id, status: 'rejected' })
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data && data.ok) { toast('Заказ отменён'); loadOrders().then(renderOrders); }
-        else toast((data && data.error) || 'Ошибка', true);
-      })
-      .catch(function() { toast('Ошибка сети', true); });
-  }
+        document.getElementById('orderOverlay').classList.add('ms-overlay--open');
+        setBackButton(true, closeSheet);
+        if (!authed) {
+          var buyBtn = document.getElementById('msBuyBtn');
+          if (buyBtn) buyBtn.disabled = true;
+        }
+      }
 
-  function copyPhone(phone) {
-    var text = '+' + phone;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function() { toast('Номер скопирован: ' + text); });
-    } else {
-      var ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); toast('Номер скопирован: ' + text); } catch (e) {}
-      document.body.removeChild(ta);
-    }
-  }
+      function confirmOrder(id, country, type) {
+        if (!authed || !session) { toast('Откройте маркет через бота Telegram', true); return; }
+        // type — 'virtual' (id = сервис) или 'telegram' (id = тип номера).
+        // Различаем явно: id сервиса может совпадать с типом (например, 'telegram').
+        var svc = null;
+        if (type === 'telegram') {
+          svc = { id: 'telegram', name: currentSheetName(), price: 49, type: 'telegram' };
+        } else {
+          var s = Data.getService(id);
+          svc = s ? { id: s.id, name: s.name, price: s.price, type: 'virtual' } : null;
+        }
+        if (!svc) return;
 
-  // ===== Sheet =====
-  function closeSheet() {
-    document.getElementById('orderOverlay').classList.remove('ms-overlay--open');
-  }
+        haptic('medium');
 
-  // ===== Utilities =====
-  function esc(str) {
-    var d = document.createElement('div');
-    d.appendChild(document.createTextNode(str == null ? '' : String(str)));
-    return d.innerHTML;
-  }
-  function escAttr(str) {
-    return String(str).replace(/'/g, '\\\'');
-  }
-  function fmtDate(iso) {
-    try {
-      var d = new Date(iso);
-      if (isNaN(d.getTime())) return '';
-      return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    } catch (e) { return ''; }
-  }
+        // Заказ без списания баланса — оплата подтверждается вручную
+        var p = Data.createPurchase(session.id, svc.type, svc.name, country, svc.price, 'RUB');
 
-  var toastTimer = null;
-  function toast(text, isErr) {
-    var el = document.getElementById('toast');
-    el.textContent = text;
-    el.className = 'ms-toast ms-toast--on' + (isErr ? ' ms-toast--err' : '');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function() { el.className = 'ms-toast'; }, 2200);
-  }
+        // Уведомляем администратора в чате (как на сайте) + автоответ
+        notifyAdminOfPurchase(svc.name, country, svc.price);
 
-  // ===== Init =====
-  function init() {
-    initTg();
-    renderCats();
-    applyFilters();
-    initAuth();
-  }
+        var body = document.getElementById('msSheetBody');
+        body.innerHTML =
+          '<div class="ms-success">' +
+            '<div class="ms-success__icon">✅</div>' +
+            '<div class="ms-success__title">Заказ №' + p.id + ' создан</div>' +
+            '<div class="ms-success__text">Сервис: <b>' + esc(svc.name) + '</b> · ' + esc(country) + ' · <b>' + fmtPrice(svc.price) + '</b></div>' +
+            '<div class="ms-success__steps">' +
+              '<div><span>1.</span> Переведите <b>' + fmtPrice(svc.price) + '</b> на аккаунт <b>@' + SUPPORT + '</b>.</div>' +
+              '<div><span>2.</span> В комментарии к переводу укажите <b>№' + p.id + '</b>.</div>' +
+              '<div><span>3.</span> Пришлите скриншот оплаты в чат с ботом.</div>' +
+              '<div><span>4.</span> Номер появится в «Моих заказах» после подтверждения.</div>' +
+            '</div>' +
+            '<button class="btn btn--lg btn--full" onclick="Shop.closeSheet();Profile.toggleDrawer()">📋 Мои заказы</button>' +
+            '<button class="btn btn--lg btn--full btn--outline" style="margin-top:8px" onclick="Shop.closeSheet()">Продолжить покупки</button>' +
+          '</div>';
+        toast('Заказ №' + p.id + ' создан');
+      }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+      // Имя текущего заказа для «telegram»-типа (запоминаем при открытии шита)
+      var _sheetName = null;
+      function currentSheetName() { return _sheetName || 'Готовые номера Telegram'; }
 
-  return {
-    setCat: function(c) { cat = c; renderCats(); applyFilters(); },
-    applyFilters: applyFilters,
-    openOrder: openOrder,
-    submitOrder: submitOrder,
-    closeSheet: closeSheet,
-    toggleOrders: toggleOrders,
-    cancelOrder: cancelOrder,
-    copyPhone: copyPhone
-  };
-})();
-</script>
+      // ===== Уведомление админа в чат (как FunPay на сайте) =====
+      function notifyAdminOfPurchase(serviceName, country, price) {
+        if (!session) return;
+        var send = function() {
+          var adminId = (typeof Data !== 'undefined' && Data.getAdminId) ? Data.getAdminId() : null;
+          if (!adminId) return false;
+          Data.sendMessage(
+            session.id, session.name,
+            adminId, Data.getAdminName(),
+            '🛒 Заказ из Telegram: ' + serviceName + ', ' + country + ' — ' + price + ' ₽'
+          );
+          if (typeof Data.scheduleAutoReply === 'function') {
+            Data.scheduleAutoReply(session.id, session.name, adminId, Data.getAdminName());
+          }
+          return true;
+        };
+        if (!send()) {
+          if (window.Auth && Auth.syncUsers) Auth.syncUsers().then(function() { send(); });
+        }
+      }
+
+      // ===== Sheet =====
+      function closeSheet() {
+        document.getElementById('orderOverlay').classList.remove('ms-overlay--open');
+        setBackButton(false, closeSheet);
+      }
+
+      // ===== Utilities =====
+      function logo(id) {
+        var map = {
+          telegram:'TG', whatsapp:'WA', viber:'VB', discord:'DC', signal:'SG',
+          wechat:'WC', line:'LN', skype:'SK', instagram:'IG', facebook:'FB',
+          'x-twitter':'X', tiktok:'TK', snapchat:'SC', linkedin:'LI',
+          pinterest:'PI', 'telegram-premium':'TP', binance:'BN', bybit:'BB',
+          huobi:'HB', okx:'OK', coinbase:'CB', kraken:'KR', gateio:'GT',
+          kucoin:'KC', mexc:'MX', sberbank:'SB', tinkoff:'TB', raiffeisen:'RZ',
+          paypal:'PP', wise:'WS', revolut:'RV', webmoney:'WM', qiwi:'QI',
+          yoomoney:'YM', netflix:'NF', spotify:'SF', twitch:'TW', steam:'SM',
+          'epic-games':'EG', xbox:'XB', playstation:'PS', 'riot-games':'RG',
+          minecraft:'MC', pubg:'PG', avito:'AV', olx:'OX', google:'GO',
+          microsoft:'MS', apple:'AP', aliexpress:'AX', alibaba:'AL', ebay:'EB',
+          fiverr:'FV', vk:'VK', wargaming:'WG', youtube:'YT', chatgpt:'CH',
+          'battle-net':'BA', tinder:'TD', 'plenty-of-fish':'PF', okcupid:'OC',
+          mamba:'MB', skout:'SO', happn:'HP', hinge:'HI', bumble:'BU',
+          gett:'GE', uber:'UB', bolt:'BT', airbnb:'AB', booking:'BC',
+          wolt:'WL', glovo:'GL', foodpanda:'FP', dhl:'DH', doordash:'DD'
+        };
+        return map[id] || (id.charAt(0).toUpperCase() + id.charAt(1).toUpperCase());
+      }
+
+      function fmtPrice(price) {
+        return window._currency === 'USD'
+          ? '$' + (price * 0.011).toFixed(2)
+          : price + ' ₽';
+      }
+
+      function esc(str) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(str == null ? '' : String(str)));
+        return d.innerHTML;
+      }
+
+      function escAttr(str) {
+        return String(str).replace(/'/g, '\\\'');
+      }
+
+      var toastTimer = null;
+      function toast(text, isErr) {
+        var el = document.getElementById('toast');
+        el.textContent = text;
+        el.className = 'ms-toast ms-toast--on' + (isErr ? ' ms-toast--err' : '');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() { el.className = 'ms-toast'; }, 2200);
+      }
+
+      // ===== Init =====
+      function init() {
+        initTg();
+        initAuth();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+      return {
+        openSheet: function(svc, country) { _sheetName = svc.name; openSheet(svc, country); },
+        confirmOrder: confirmOrder,
+        closeSheet: closeSheet,
+        toast: toast
+      };
+    })();
+  </script>
+
+  <script>
+    // Запуск синхронизации чата, если пользователь уже авторизован (как на сайте)
+    (function() {
+      var session = Auth && Auth.getSession();
+      if (session) {
+        Auth.syncUsers();
+        ChatServer.startSync();
+      }
+    })();
+  </script>
+
+  </main>
 </body>
 </html>

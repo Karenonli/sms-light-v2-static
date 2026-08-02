@@ -14,6 +14,11 @@ const { db, getPool, initDb } = require('./lib/db');
 // ===== Telegram-бот (мини-маркет) =====
 const tgBot = require('./lib/tg-bot');
 
+// Inline-кнопка «Админка» для уведомлений в чат администратора
+function tgAdminKeyboard() {
+  return [[{ text: '🧑‍💻 Админка', url: tgBot.SITE_BASE + '/admin' }]];
+}
+
 // ===== Администраторы =====
 const ADMIN_EMAILS = ['justxirrez@inbox.ru', 'mikoto_11@list.ru'];
 
@@ -164,6 +169,19 @@ app.post('/api/auth/register', async (req, res) => {
       'INSERT INTO users (name, nickname, email, password, is_admin, verification_code, email_verified) VALUES ($1, $2, $3, $4, $5, $6, 0)',
       [name, nickname || name, email, hash, isAdmin, code]
     );
+
+    // Telegram-уведомление админу о новой регистрации (не для админ-аккаунтов).
+    // Await обязателен: на Vercel после res функция замораживается, фоновая отправка не уйдёт.
+    if (process.env.ADMIN_TG_CHAT_ID && !isAdmin) {
+      try {
+        await tgBot.notifyAdmin(
+          '👤 Новый пользователь\nИмя: ' + name + '\nEmail: ' + email,
+          tgAdminKeyboard()
+        );
+      } catch (err) {
+        console.error('TG notifyAdmin (register) error:', err);
+      }
+    }
 
     try {
       await sendEmail(email, 'Подтверждение регистрации — SMS Light', templates.verification(code));
@@ -507,6 +525,25 @@ app.post('/api/messages/send', async (req, res) => {
        ON CONFLICT (id) DO NOTHING`,
       [msgId, senderId, senderName, receiverId, receiverName, text, created_at || new Date().toISOString(), read ? 1 : 0]
     );
+
+    // Telegram-уведомление админу, когда покупатель пишет в чат.
+    // Пропускаем служебные «🛒 Заказ: …» (о них уже уведомляет /api/purchases),
+    // автоответы и сообщения от самих админов.
+    if (process.env.ADMIN_TG_CHAT_ID && String(text).indexOf('🛒') !== 0) {
+      try {
+        const senderU = await db.get('SELECT is_admin, name FROM users WHERE id = $1', [senderId]);
+        const receiverU = await db.get('SELECT is_admin FROM users WHERE id = $1', [receiverId]);
+        if (receiverU && receiverU.is_admin && senderU && !senderU.is_admin) {
+          await tgBot.notifyAdmin(
+            '💬 Новое сообщение от ' + (senderU.name || senderId) + '\n' + String(text).slice(0, 300),
+            tgAdminKeyboard()
+          );
+        }
+      } catch (err) {
+        console.error('TG notifyAdmin (message) error:', err);
+      }
+    }
+
     res.json({ ok: true, id: msgId });
   } catch (err) {
     console.error('Send message error:', err);
@@ -831,6 +868,19 @@ app.post('/api/tg/auth', async (req, res) => {
         [email, name, nickname, new Date().toISOString()]
       );
       user = await db.get('SELECT * FROM users WHERE email = $1', [email]);
+
+      // Telegram-уведомление админу о новом посетителе мини-маркета (только при создании).
+      if (process.env.ADMIN_TG_CHAT_ID) {
+        try {
+          await tgBot.notifyAdmin(
+            '👤 Новый пользователь Telegram-маркета\nИмя: ' + name
+            + (nickname ? '\nUsername: @' + nickname : ''),
+            tgAdminKeyboard()
+          );
+        } catch (err) {
+          console.error('TG notifyAdmin (tg auth) error:', err);
+        }
+      }
     } else {
       await db.run('UPDATE users SET name = $1, nickname = $2 WHERE id = $3', [name, nickname, user.id]);
     }
