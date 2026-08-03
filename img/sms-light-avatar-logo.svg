@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" style="font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1411"/>
+      <stop offset="1" stop-color="#050807"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="512" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="rgba(16,185,129,0.16)"/>
+      <stop offset="1" stop-color="rgba(16,185,129,0)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Тёмный фон с мягким свечением -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="430" fill="url(#glow)"/>
+
+  <!-- Логотип -->
+  <text x="512" y="564" font-size="150" font-weight="800" letter-spacing="-2" text-anchor="middle">
+    <tspan fill="#f8fafc">SMS </tspan>
+    <tspan fill="url(#accent)">Light</tspan>
+  </text>
+</svg>
