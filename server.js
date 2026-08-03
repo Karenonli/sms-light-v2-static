@@ -583,77 +583,149 @@ app.get('/api/admin/smtp-status', requireAdmin, async (req, res) => {
   }
 });
 
-// Статистика для админки: прогресс новых пользователей и активность.
-// Группировка по дням — в московском времени (Europe/Moscow), чтобы
-// «сегодня» у администратора совпадало с его календарным днём.
+// Статистика для админки.
+// Все периоды («сегодня», «7 дней», «30 дней») считаются по календарным дням
+// в московском времени (Europe/Moscow), чтобы «сегодня» у администратора
+// совпадало с его календарным днём. Раньше «сегодня» было последними 24 часами —
+// из-за этого цифры на вкладке казались непонятными.
 // created_at в users — TIMESTAMP (UTC), в purchases/messages — TEXT ISO UTC.
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   try {
     const TZ = 'Europe/Moscow';
     const DAYS = 35;
-    // Граница «сейчас» как чистое UTC-время (независимо от session TimeZone Neon)
-    const nowUtc = "(NOW() AT TIME ZONE 'UTC')";
+    // Московская дата «сейчас» (DATE). Сравниваем её с датами в той же TZ,
+    // поэтому session TimeZone на Neon не влияет на результат.
+    const mskToday = `(NOW() AT TIME ZONE '${TZ}')::date`;
+    const uDay = `(created_at AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')::date`;
+    const pDay = `(created_at::timestamptz AT TIME ZONE '${TZ}')::date`;
 
-    // Дневные серии (последние DAYS дней)
+    // Дневные серии (последние DAYS дней) — для графиков
     const usersDailyRaw = await db.all(
-      `SELECT to_char((created_at AT TIME ZONE 'UTC' AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
-              COUNT(*)::int AS count
-       FROM users WHERE created_at >= ${nowUtc} - INTERVAL '${DAYS} days'
+      `SELECT to_char(${uDay}, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+       FROM users WHERE ${uDay} >= (${mskToday} - INTERVAL '${DAYS - 1} days')::date
        GROUP BY 1 ORDER BY 1`
     );
     const purchasesDailyRaw = await db.all(
-      `SELECT to_char((created_at::timestamptz AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
-              COUNT(*)::int AS count
+      `SELECT to_char(${pDay}, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
        FROM purchases
        WHERE created_at IS NOT NULL AND created_at <> ''
-         AND created_at::timestamptz >= NOW() - INTERVAL '${DAYS} days'
+         AND ${pDay} >= (${mskToday} - INTERVAL '${DAYS - 1} days')::date
        GROUP BY 1 ORDER BY 1`
     );
     const messagesDailyRaw = await db.all(
-      `SELECT to_char((created_at::timestamptz AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
-              COUNT(*)::int AS count
+      `SELECT to_char(${pDay}, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
        FROM messages
        WHERE created_at IS NOT NULL AND created_at <> ''
-         AND created_at::timestamptz >= NOW() - INTERVAL '${DAYS} days'
+         AND ${pDay} >= (${mskToday} - INTERVAL '${DAYS - 1} days')::date
        GROUP BY 1 ORDER BY 1`
     );
 
-    // Агрегаты за периоды
+    // Агрегаты за периоды. Выручка = сумма цен выполненных заказов (status='completed').
     const rows = await Promise.all([
-      db.get('SELECT COUNT(*)::int AS c FROM users'),
-      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '1 day'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '7 days'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM users WHERE created_at >= ${nowUtc} - INTERVAL '30 days'`),
-      db.get('SELECT COUNT(*)::int AS c FROM purchases'),
-      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '1 day'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM purchases WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '30 days'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '1 day'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '7 days'`),
-      db.get(`SELECT COUNT(*)::int AS c FROM messages WHERE created_at IS NOT NULL AND created_at <> '' AND created_at::timestamptz >= NOW() - INTERVAL '30 days'`),
+      // Пользователи: всего / сегодня / вчера / 7 дней / 30 дней
+      db.get(`SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE ${uDay} = ${mskToday})::int AS today,
+        COUNT(*) FILTER (WHERE ${uDay} = ${mskToday} - 1)::int AS yesterday,
+        COUNT(*) FILTER (WHERE ${uDay} >= (${mskToday} - INTERVAL '6 days')::date)::int AS week,
+        COUNT(*) FILTER (WHERE ${uDay} >= (${mskToday} - INTERVAL '29 days')::date)::int AS month
+        FROM users`),
+      // Заказы + выручка
+      db.get(`SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE ${pDay} = ${mskToday})::int AS today,
+        COUNT(*) FILTER (WHERE ${pDay} = ${mskToday} - 1)::int AS yesterday,
+        COUNT(*) FILTER (WHERE ${pDay} >= (${mskToday} - INTERVAL '6 days')::date)::int AS week,
+        COUNT(*) FILTER (WHERE ${pDay} >= (${mskToday} - INTERVAL '29 days')::date)::int AS month,
+        COALESCE(SUM(price) FILTER (WHERE status = 'completed' AND ${pDay} = ${mskToday}), 0)::int AS revenueToday,
+        COALESCE(SUM(price) FILTER (WHERE status = 'completed' AND ${pDay} = ${mskToday} - 1), 0)::int AS revenueYesterday,
+        COALESCE(SUM(price) FILTER (WHERE status = 'completed' AND ${pDay} >= (${mskToday} - INTERVAL '6 days')::date), 0)::int AS revenueWeek,
+        COALESCE(SUM(price) FILTER (WHERE status = 'completed' AND ${pDay} >= (${mskToday} - INTERVAL '29 days')::date), 0)::int AS revenueMonth,
+        COALESCE(SUM(price) FILTER (WHERE status = 'completed'), 0)::int AS revenueTotal
+        FROM purchases
+        WHERE created_at IS NOT NULL AND created_at <> ''`),
+      // Сообщения
+      db.get(`SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE ${pDay} = ${mskToday})::int AS today,
+        COUNT(*) FILTER (WHERE ${pDay} = ${mskToday} - 1)::int AS yesterday,
+        COUNT(*) FILTER (WHERE ${pDay} >= (${mskToday} - INTERVAL '6 days')::date)::int AS week,
+        COUNT(*) FILTER (WHERE ${pDay} >= (${mskToday} - INTERVAL '29 days')::date)::int AS month
+        FROM messages
+        WHERE created_at IS NOT NULL AND created_at <> ''`),
+      // Покупатели и активные пользователи за 30 дней (без админов)
+      db.get(`SELECT
+        (SELECT COUNT(DISTINCT user_id)::int FROM purchases
+         WHERE created_at IS NOT NULL AND created_at <> ''
+           AND ${pDay} >= (${mskToday} - INTERVAL '29 days')::date
+           AND user_id NOT IN (SELECT id FROM users WHERE is_admin = 1)) AS buyers30,
+        (SELECT COUNT(*)::int FROM (
+           SELECT user_id FROM purchases
+           WHERE created_at IS NOT NULL AND created_at <> ''
+             AND ${pDay} >= (${mskToday} - INTERVAL '29 days')::date
+             AND user_id NOT IN (SELECT id FROM users WHERE is_admin = 1)
+           UNION
+           SELECT sender_id FROM messages
+           WHERE created_at IS NOT NULL AND created_at <> ''
+             AND ${pDay} >= (${mskToday} - INTERVAL '29 days')::date
+             AND sender_id NOT IN (SELECT id FROM users WHERE is_admin = 1)
+         ) AS act) AS activeUsers30`),
+      // Статусы заказов за 30 дней
+      db.all(`SELECT status, COUNT(*)::int AS count, COALESCE(SUM(price), 0)::int AS revenue
+        FROM purchases
+        WHERE created_at IS NOT NULL AND created_at <> ''
+          AND ${pDay} >= (${mskToday} - INTERVAL '29 days')::date
+        GROUP BY status ORDER BY count DESC`),
+      // Статусы заказов за всё время
+      db.all(`SELECT status, COUNT(*)::int AS count, COALESCE(SUM(price), 0)::int AS revenue
+        FROM purchases
+        WHERE created_at IS NOT NULL AND created_at <> ''
+        GROUP BY status ORDER BY count DESC`),
     ]);
 
+    // Топ сервисов: число заказов + выручка с выполненных
     const topServices = await db.all(
-      `SELECT service_name AS name, COUNT(*)::int AS count FROM purchases
+      `SELECT service_name AS name,
+              COUNT(*)::int AS count,
+              COALESCE(SUM(price) FILTER (WHERE status = 'completed'), 0)::int AS revenue
+       FROM purchases
        GROUP BY service_name ORDER BY count DESC, name ASC LIMIT 8`
     );
+    // Последние регистрации
     const recent = await db.all(
       `SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 8`
     );
+    // Последние заказы (с именем покупателя)
+    const recentPurchases = await db.all(
+      `SELECT p.id, p.service_name, p.price, p.currency, p.status, p.created_at,
+              u.name, u.email
+       FROM purchases p LEFT JOIN users u ON u.id = p.user_id
+       WHERE p.created_at IS NOT NULL AND p.created_at <> ''
+       ORDER BY p.created_at DESC LIMIT 8`
+    );
 
-    const n = function(row) { return row ? row.c : 0; };
+    const U = rows[0] || {}, P = rows[1] || {}, M = rows[2] || {}, A = rows[3] || {};
     res.json({
       ok: true,
       totals: {
-        users: n(rows[0]), usersToday: n(rows[1]), usersWeek: n(rows[2]), usersMonth: n(rows[3]),
-        purchases: n(rows[4]), purchasesToday: n(rows[5]), purchasesWeek: n(rows[6]), purchasesMonth: n(rows[7]),
-        messagesToday: n(rows[8]), messagesWeek: n(rows[9]), messagesMonth: n(rows[10]),
+        users: U.total, usersToday: U.today, usersYesterday: U.yesterday,
+        usersWeek: U.week, usersMonth: U.month,
+        purchases: P.total, purchasesToday: P.today, purchasesYesterday: P.yesterday,
+        purchasesWeek: P.week, purchasesMonth: P.month,
+        revenueToday: P.revenueToday, revenueYesterday: P.revenueYesterday,
+        revenueWeek: P.revenueWeek, revenueMonth: P.revenueMonth, revenueTotal: P.revenueTotal,
+        messages: M.total, messagesToday: M.today, messagesYesterday: M.yesterday,
+        messagesWeek: M.week, messagesMonth: M.month,
+        buyers30: A.buyers30, activeUsers30: A.activeUsers30,
       },
+      statusMonth: rows[4],
+      statusTotal: rows[5],
       usersDaily: usersDailyRaw,
       purchasesDaily: purchasesDailyRaw,
       messagesDaily: messagesDailyRaw,
       topServices,
       recent,
+      recentPurchases,
     });
   } catch (err) {
     console.error('Admin stats error:', err.message);
