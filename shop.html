@@ -1064,7 +1064,6 @@
               if (window.ChatServer && ChatServer.startSync) ChatServer.startSync();
               return true;
             }
-            showBanner('Не удалось войти в Telegram. Откройте маркет через бота.');
             return false;
           })
           .catch(function() { showBanner('Сервер недоступен. Попробуйте позже.'); return false; });
