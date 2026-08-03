@@ -896,11 +896,26 @@ window.Data = (function() {
     // Весь чат (покупатель + админка) опирается на ОДНОГО админа —
     // первого в списке с is_admin. Иначе покупатель пишет админу id=1,
     // а админ (залогиненный под id=6) отвечает с id=6 — и никто никого не видит.
+    // Канонический админ — МИНИМАЛЬНЫЙ id среди админов списка.
+    // Важно: /api/admin/users отдаёт админов в порядке created_at DESC, а
+    // /api/users — в порядке id ASC. Если брать «первого по массиву», панель
+    // выберет админа id=6, покупатель — id=1, и переписка разойдётся на две пары.
+    // Мин-ид детерминирован независимо от сортировки — обе стороны всегда сходятся.
+    _minAdminId: function(users) {
+      var minId = null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) {
+          var uid = parseInt(users[i].id, 10);
+          if (isNaN(uid)) continue;
+          if (minId === null || uid < minId) minId = uid;
+        }
+      }
+      return minId;
+    },
     getAdminId: function() {
       var users = (typeof window.Auth !== 'undefined' && window.Auth.getUsers) ? window.Auth.getUsers() : [];
-      for (var i = 0; i < users.length; i++) {
-        if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) return users[i].id;
-      }
+      var minId = this._minAdminId(users);
+      if (minId !== null) return minId;
       // Список ещё не загрузился (sms_users пуст) — берём канонический id из кэша.
       // НИКОГДА не возвращаем session.id админа: иначе покупатель и админ пишут в разные пары.
       try {
@@ -914,13 +929,11 @@ window.Data = (function() {
     // работал даже до загрузки полного списка пользователей.
     cacheAdminId: function(users) {
       if (!users) return null;
-      for (var i = 0; i < users.length; i++) {
-        if (users[i] && (users[i].is_admin === 1 || users[i].is_admin === true)) {
-          try { localStorage.setItem('sms_admin_id', String(users[i].id)); } catch(e) {}
-          return users[i].id;
-        }
+      var minId = this._minAdminId(users);
+      if (minId !== null) {
+        try { localStorage.setItem('sms_admin_id', String(minId)); } catch(e) {}
       }
-      return null;
+      return minId;
     },
     getAdminName: function() {
       return 'SMS Light';
@@ -956,10 +969,7 @@ window.Data = (function() {
           allUsers = window.Auth.getUsers();
         }
       }
-      var adminId = null;
-      for (var i = 0; i < allUsers.length; i++) {
-        if (allUsers[i].is_admin === 1 || allUsers[i].is_admin === true) { adminId = allUsers[i].id; break; }
-      }
+      var adminId = this._minAdminId(allUsers);
       if (!adminId) return [];
 
       var userIds = {};
