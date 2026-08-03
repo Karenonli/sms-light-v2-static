@@ -217,8 +217,6 @@ input, button, select, textarea { font-family: inherit; }
   z-index: 100;
   background: var(--bg-2);
   border-bottom: 1px solid var(--gray-800);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .header::after {
   content: '';
@@ -3381,19 +3379,10 @@ input, button, select, textarea { font-family: inherit; }
    ============================================ */
 
 /* --- Фон: мягкие свечения + сетка --- */
+/* Свечения вынесены в body::before (position: fixed) — слой комбинируется на GPU,
+   а не перерисовывается при каждом кадре прокрутки (background-attachment: fixed давала лаги) */
 body {
-  background:
-    radial-gradient(1100px 520px at 50% -8%, var(--glow-green) 0%, transparent 62%),
-    radial-gradient(700px 420px at 92% 4%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
-}
-[data-theme="light"] body {
-  background:
-    radial-gradient(1100px 520px at 50% -8%, rgba(5, 150, 105, 0.08) 0%, transparent 62%),
-    radial-gradient(700px 420px at 92% 4%, rgba(5, 150, 105, 0.05) 0%, transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
 }
 body::before {
   content: '';
@@ -3401,22 +3390,41 @@ body::before {
   inset: 0;
   z-index: -1;
   background-image:
+    radial-gradient(1100px 520px at 50% -8%, var(--glow-green) 0%, transparent 62%),
+    radial-gradient(700px 420px at 92% 4%, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 46px 46px;
+  background-size:
+    auto,
+    auto,
+    46px 46px,
+    46px 46px;
+  background-repeat:
+    no-repeat,
+    no-repeat,
+    repeat,
+    repeat;
   pointer-events: none;
+}
+[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(1100px 520px at 50% -8%, rgba(5, 150, 105, 0.08) 0%, transparent 62%),
+    radial-gradient(700px 420px at 92% 4%, rgba(5, 150, 105, 0.05) 0%, transparent 60%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
 }
 .admin-body::before { display: none; }
 
-/* --- Шапка: стекло --- */
+/* --- Шапка: стекло (без backdrop-filter — переразмытие фона под шапкой при прокрутке давало лаги) --- */
 .header {
-  background: var(--glass-bg);
+  background: rgba(13, 15, 15, 0.92);
   border-bottom-color: var(--glass-brd);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
 [data-theme="light"] .header {
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
