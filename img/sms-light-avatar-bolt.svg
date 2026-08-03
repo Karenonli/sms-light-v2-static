@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" style="font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1a16"/>
+      <stop offset="0.55" stop-color="#08100d"/>
+      <stop offset="1" stop-color="#050807"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="512" r="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="rgba(16,185,129,0.20)"/>
+      <stop offset="0.6" stop-color="rgba(16,185,129,0.07)"/>
+      <stop offset="1" stop-color="rgba(16,185,129,0)"/>
+    </radialGradient>
+    <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6ee7b7"/>
+      <stop offset="0.5" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+      <path d="M56 0H0V56" fill="none" stroke="rgba(16,185,129,0.045)" stroke-width="1.5"/>
+    </pattern>
+    <filter id="boltBlur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+
+  <!-- Фон -->
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#grid)"/>
+  <circle cx="512" cy="512" r="430" fill="url(#glow)"/>
+
+  <!-- Двойное неоновое кольцо-«сеть» -->
+  <circle cx="512" cy="512" r="296" fill="none" stroke="rgba(52,211,153,0.18)" stroke-width="3" stroke-dasharray="12 34"/>
+  <circle cx="512" cy="512" r="252" fill="none" stroke="rgba(52,211,153,0.34)" stroke-width="4"/>
+  <circle cx="512" cy="512" r="252" fill="none" stroke="rgba(52,211,153,0.12)" stroke-width="14"/>
+
+  <!-- Свечение за молнией -->
+  <path d="M 566 176 L 428 472 L 512 472 L 460 848 L 622 520 L 532 520 L 628 176 Z" fill="#34d399" opacity="0.55" filter="url(#boltBlur)"/>
+
+  <!-- Молния -->
+  <path d="M 566 176 L 428 472 L 512 472 L 460 848 L 622 520 L 532 520 L 628 176 Z" fill="url(#boltGrad)" stroke="#a7f3d0" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Разлетающиеся цифры кода -->
+  <g fill="#6ee7b7">
+    <text x="512" y="120" font-size="40" font-weight="800" text-anchor="middle" opacity="0.75">4</text>
+    <text x="228" y="320" font-size="30" font-weight="800" text-anchor="middle" opacity="0.5" transform="rotate(-14 228 320)">2</text>
+    <text x="826" y="360" font-size="34" font-weight="800" text-anchor="middle" opacity="0.6" transform="rotate(12 826 360)">1</text>
+    <text x="200" y="780" font-size="32" font-weight="800" text-anchor="middle" opacity="0.55" transform="rotate(-8 200 780)">4</text>
+    <text x="830" y="780" font-size="28" font-weight="800" text-anchor="middle" opacity="0.45" transform="rotate(9 830 780)">2</text>
+  </g>
+
+  <!-- Частицы -->
+  <g fill="#34d399">
+    <circle cx="130" cy="150" r="6" opacity="0.4"/>
+    <circle cx="900" cy="160" r="5" opacity="0.35"/>
+    <circle cx="920" cy="880" r="6" opacity="0.3"/>
+    <circle cx="104" cy="880" r="5" opacity="0.3"/>
+    <circle cx="512" cy="930" r="4" opacity="0.35"/>
+    <circle cx="940" cy="520" r="4" opacity="0.3"/>
+  </g>
+</svg>
