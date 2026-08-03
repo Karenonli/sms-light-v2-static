@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1411"/>
+      <stop offset="1" stop-color="#040807"/>
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6ee7b7"/>
+      <stop offset="0.5" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+
+  <!-- Тёмный фон -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Свечение за молнией -->
+  <path d="M 566 208 L 430 472 L 510 472 L 462 816 L 606 522 L 530 522 L 626 208 Z" fill="#34d399" opacity="0.5" filter="url(#glow)"/>
+
+  <!-- Молния -->
+  <path d="M 566 208 L 430 472 L 510 472 L 462 816 L 606 522 L 530 522 L 626 208 Z" fill="url(#boltGrad)" stroke="#a7f3d0" stroke-width="3" stroke-linejoin="round"/>
+</svg>

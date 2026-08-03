@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1410"/>
+      <stop offset="1" stop-color="#050807"/>
+    </linearGradient>
+    <radialGradient id="disc" cx="0.42" cy="0.38" r="1">
+      <stop offset="0" stop-color="#6ee7b7"/>
+      <stop offset="0.45" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#047857"/>
+    </radialGradient>
+    <filter id="discShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="30" flood-color="#10b981" flood-opacity="0.35"/>
+    </filter>
+    <filter id="boltSoft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <!-- Тёмный фон -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Зелёный диск -->
+  <circle cx="512" cy="512" r="378" fill="url(#disc)" filter="url(#discShadow)"/>
+
+  <!-- Свечение за молнией -->
+  <path d="M 566 250 L 438 470 L 512 470 L 468 752 L 600 522 L 532 522 L 604 250 Z" fill="#047857" opacity="0.5" filter="url(#boltSoft)"/>
+
+  <!-- Молния -->
+  <path d="M 566 250 L 438 470 L 512 470 L 468 752 L 600 522 L 532 522 L 604 250 Z" fill="#f0fdf4" stroke="#a7f3d0" stroke-width="4" stroke-linejoin="round"/>
+</svg>
