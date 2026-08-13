@@ -1,5 +1,6 @@
-// server.js — Express API сервер
+ // server.js — Express API сервер
 // Работает как standalone (node server.js) так и на Vercel (serverless)
+// [refresh] SMTP 587 STARTTLS
 
 const express = require('express');
 const session = require('express-session');
@@ -13,6 +14,12 @@ const { db, getPool, initDb } = require('./lib/db');
 
 // ===== Telegram-бот (мини-маркет) =====
 const tgBot = require('./lib/tg-bot');
+
+// ===== Платёжная система Fride =====
+const fride = require('./lib/fride');
+
+// ===== SMS-агрегатор (автовыдача виртуальных номеров) =====
+const sms = require('./lib/sms');
 
 // Inline-кнопка «Админка» для уведомлений в чат администратора
 function tgAdminKeyboard() {
@@ -34,6 +41,10 @@ const app = express();
 // На Vercel TLS завершается на Edge, внутри функции запрос приходит по HTTP.
 // Без этого Express считает соединение небезопасным и не отправляет Secure-куки сессии.
 app.set('trust proxy', 1);
+
+// Вебхук Fride: подпись считается по ИСХОДНОМУ телу запроса, поэтому для этого
+// пути подключаем raw-парсер ДО express.json (он отдаёт req.body как Buffer).
+app.use('/api/fride/webhook', express.raw({ type: '*/*' }));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -429,7 +440,7 @@ app.post('/api/auth/forgot', async (req, res) => {
     // Ищем и по email, и по username (регистрация по username): LOWER делает
     // поиск нечувствительным к регистру. Код восстановления уходит на email
     // аккаунта — даже если пользователь ввёл свой username.
-    const user = await db.get('SELECT id, email FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
+    const user = await db.get('SELECT id, email, tg_id FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
     if (!user) {
       return res.json({ ok: true, message: 'Если аккаунт существует, код отправлен на email' });
     }
@@ -439,29 +450,52 @@ app.post('/api/auth/forgot', async (req, res) => {
 
     await db.run('UPDATE users SET reset_code = $1, reset_code_expires = $2 WHERE id = $3', [code, expires, user.id]);
 
-    try {
-      await sendEmail(user.email, 'Восстановление пароля — SMS Light', templates.reset(code));
-      console.log(`→ Код восстановления для ${email} (email: ${user.email}): ${code}`);
+    const tgId = user.tg_id;
+    if (tgId) {
+      // Код восстановления отправляем в Telegram-чат пользователя (предпочитительнее email)
+      const tgRes = await tgBot.api('sendMessage', {
+        chat_id: tgId,
+        text: '🔐 Код восстановления пароля — SMS Light\n\n'
+          + 'Ваш код: <b>' + code + '</b>\n\n'
+          + 'Он действителен 15 минут.',
+        parse_mode: 'HTML',
+      });
+      if (tgRes.ok) {
+        console.log(`→ Код восстановления для ${email} (tg_id: ${tgId}): ${code}`);
+      } else {
+        console.error('Forgot TG send failed, falling back to email:', tgRes.error);
+      }
       res.json({
         ok: true,
-        message: 'Код восстановления отправлен на ваш email. Проверьте также папку «Спам».',
+        message: 'Код восстановления отправлен в ваш Telegram-чат. Откройте диалог с ботом @' + tgBot.SUPPORT_USERNAME + '.',
         ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
       });
-    } catch (emailErr) {
-      console.error('Forgot email failed:', emailErr.message);
-      console.log(`→ [ВНИМАНИЕ] Код восстановления для ${email}: ${code} (письмо не отправлено)`);
-      if (IS_DEV && isUsingFallback()) {
+    } else {
+      // Пользователь не привязал Telegram — fallback на email
+      try {
+        await sendEmail(user.email, 'Восстановление пароля — SMS Light', templates.reset(code));
+        console.log(`→ Код восстановления для ${email} (email: ${user.email}): ${code}`);
         res.json({
           ok: true,
-          email_failed: true,
-          message: '⚠️ Не удалось отправить письмо. Код восстановления: ' + code,
-          dev_code: code,
+          message: 'Код восстановления отправлен на ваш email. Проверьте также папку «Спам».',
+          ...(IS_DEV && isUsingFallback() ? { dev_code: code } : {}),
         });
-      } else {
-        res.json({
-          ok: true,
-          message: 'Код восстановления запрошен. Если письмо не пришло в течение пары минут, проверьте правильность email и попробуйте ещё раз.',
-        });
+      } catch (emailErr) {
+        console.error('Forgot email failed:', emailErr.message);
+        console.log(`→ [ВНИМАНИЕ] Код восстановления для ${email}: ${code} (письмо не отправлено)`);
+        if (IS_DEV && isUsingFallback()) {
+          res.json({
+            ok: true,
+            email_failed: true,
+            message: '⚠️ Не удалось отправить письмо. Код восстановления: ' + code,
+            dev_code: code,
+          });
+        } else {
+          res.json({
+            ok: true,
+            message: 'Код восстановления запрошен. Если письмо не пришло в течение пары минут, проверьте правильность email и попробуйте ещё раз.',
+          });
+        }
       }
     }
   } catch (err) {
@@ -830,8 +864,62 @@ function mapPurchase(m) {
     currency: m.currency,
     phoneNumber: m.phone_number,
     status: m.status,
+    activationId: m.activation_id || '',
+    code: m.code || '',
     created_at: m.created_at,
   };
+}
+
+// Попытаться выдать номер автоматически после подтверждения оплаты
+// (вебхук Fride или админ перевёл заказ в «Оплачен»). Номер не выдаём повторно,
+// если он уже есть. Возвращает { ok } или { ok:false, reason } — в последнем
+// случае номер выдаёт администратор вручную.
+//
+// Источники номеров (по приоритету):
+//   1) Собственный пул постоянных номеров (SMS_POOL_ENABLED=true) — номер из
+//      number_pool, SMS-код придёт на вебхук /api/sms/webhook.
+//   2) SMS-агрегатор (sms-activate / 5sim) — аренда номера через API.
+async function tryAutoIssue(purId) {
+  let pur;
+  try { pur = await db.get('SELECT * FROM purchases WHERE id = $1', [String(purId)]); }
+  catch (e) { return { ok: false, reason: 'db-error' }; }
+  if (!pur) return { ok: false, reason: 'not-found' };
+  if (pur.phone_number) return { ok: false, reason: 'already-issued' };
+
+  // 1) Свой пул вечных номеров
+  if (process.env.SMS_POOL_ENABLED === 'true') {
+    try {
+      const free = await db.get(`SELECT * FROM number_pool WHERE status = 'available' ORDER BY id ASC LIMIT 1`);
+      if (!free) return { ok: false, reason: 'pool-empty' };
+      await db.run(
+        'UPDATE purchases SET phone_number = $1, activation_id = $2 WHERE id = $3',
+        [free.phone, 'pool:' + free.id, pur.id]
+      );
+      await db.run(
+        'UPDATE number_pool SET status = $1, purchase_id = $2 WHERE id = $3',
+        ['issued', pur.id, free.id]
+      );
+      return { ok: true, phone: free.phone, fromPool: true };
+    } catch (err) {
+      console.error('tryAutoIssue (pool) error (order ' + pur.id + '):', err.message);
+      return { ok: false, reason: 'pool-error' };
+    }
+  }
+
+  // 2) SMS-агрегатор
+  if (!sms.isConfigured()) return { ok: false, reason: 'sms-not-configured' };
+
+  try {
+    const res = await sms.buyNumber({ serviceId: pur.service_type, serviceName: pur.service_name, country: pur.country });
+    await db.run(
+      'UPDATE purchases SET phone_number = $1, activation_id = $2 WHERE id = $3',
+      [res.phone, String(res.id), pur.id]
+    );
+    return { ok: true, phone: res.phone };
+  } catch (err) {
+    console.error('tryAutoIssue error (order ' + pur.id + '):', err.message);
+    return { ok: false, reason: err.message };
+  }
 }
 
 // Создать заказ (аутентифицированный пользователь).
@@ -919,10 +1007,15 @@ app.post('/api/purchases/update', requireAuth, async (req, res) => {
       params.push(String(phoneNumber));
     }
     if (status !== undefined) {
-      const allowed = ['pending', 'completed', 'rejected'];
+      const allowed = ['pending', 'paid', 'completed', 'rejected'];
       if (!allowed.includes(status)) return res.json({ error: 'Неверный статус' });
       if (!req.session.isAdmin && status !== 'rejected') {
         return res.json({ error: 'Покупатель может только отменить заказ' });
+      }
+      // Отменить можно только неоплаченный заказ — после оплаты средства
+      // возвращаются через поддержку/Fride, а не отменой в один клик.
+      if (!req.session.isAdmin && status === 'rejected' && pur.status !== 'pending') {
+        return res.json({ error: 'Оплаченный заказ отменить нельзя — обратитесь в поддержку' });
       }
       sets.push(`status = $${sets.length + 1}`);
       params.push(status);
@@ -932,6 +1025,31 @@ app.post('/api/purchases/update', requireAuth, async (req, res) => {
       params.push(id);
       await db.run(`UPDATE purchases SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
     }
+
+    // Админ подтвердил оплату (ручной флоу) — пытаемся выдать номер автоматически,
+    // если настроен свой пул или SMS-агрегатор, и номера ещё нет.
+    if (status === 'paid' && phoneNumber === undefined
+        && (process.env.SMS_POOL_ENABLED === 'true' || sms.isConfigured())) {
+      try {
+        const auto = await tryAutoIssue(id);
+        if (auto.ok && process.env.ADMIN_TG_CHAT_ID) {
+          await tgBot.notifyAdmin(
+            (auto.fromPool ? '📦 Номер выдан из пула — заказ №' : '🤖 Номер выдан автоматически — заказ №') + id + '\n'
+            + 'Сервис: ' + pur.service_name + '\n'
+            + 'Номер: ' + auto.phone,
+            tgAdminKeyboard()
+          );
+        } else if (!auto.ok && auto.reason !== 'sms-not-configured' && process.env.ADMIN_TG_CHAT_ID) {
+          const msg = auto.reason === 'pool-empty'
+            ? '⚠️ Пул номеров пуст — заказ №' + id + '. Добавьте номера или выдайте вручную.'
+            : '⚠️ Автовыдача не удалась — заказ №' + id + ' (' + auto.reason + '). Выдайте номер вручную.';
+          await tgBot.notifyAdmin(msg, tgAdminKeyboard());
+        }
+      } catch (err) {
+        console.error('Auto-issue (update purchase) error:', err);
+      }
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error('Update purchase error:', err);
@@ -948,6 +1066,393 @@ app.delete('/api/purchases/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Delete purchase error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ========================================================================
+//  API: Оплата через Fride
+// ========================================================================
+
+// Создать онлайн-заказ с оплатой Fride (аутентифицированный пользователь).
+// Сначала создаём инвойс в Fride (order_id = id будущего заказа в БД),
+// и только после успеха Fride пишем заказ в purchases со статусом pending.
+// Возвращаем url платёжной формы, куда уходит покупатель.
+app.post('/api/fride/create', requireAuth, async (req, res) => {
+  try {
+    if (!fride.isConfigured()) {
+      // Fride ещё не настроен — клиент уходит в ручной флоу (перевод на поддержку).
+      return res.json({ ok: false, error: 'Оплата через Fride не настроена', manual: true });
+    }
+
+    const { serviceType, serviceName, country, price, currency } = req.body;
+    if (!serviceName) return res.json({ error: 'Не указан сервис' });
+    const amount = Math.round(Number(price) * 100) / 100;
+    if (!isFinite(amount) || amount <= 0) return res.json({ error: 'Неверная сумма' });
+
+    const purId = Date.now() + Math.floor(Math.random() * 1000);
+
+    // telegram_id_client нужен, только если мерчант связан с Telegram-ботами.
+    let telegramId = null;
+    try {
+      const row = await db.get('SELECT tg_id FROM users WHERE id = $1', [req.session.userId]);
+      if (row && row.tg_id) telegramId = Number(row.tg_id);
+    } catch (e) { /* не критично */ }
+
+    const siteBase = process.env.SITE_BASE_URL || tgBot.SITE_BASE;
+    const inv = await fride.createInvoice({
+      orderId: purId,
+      amount: amount,
+      currency: currency || 'RUB',
+      comment: serviceName + (country ? ', ' + country : ''),
+      customFields: { user_id: String(req.session.userId) },
+      telegramId: telegramId,
+      successUrl: siteBase + '/shop?paid=1&order=' + purId,
+      failUrl: siteBase + '/shop?pay=fail&order=' + purId,
+    });
+
+    await db.run(
+      `INSERT INTO purchases (id, user_id, service_type, service_name, country, price, currency, phone_number, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, '', 'pending', $8)
+       ON CONFLICT (id) DO NOTHING`,
+      [purId, req.session.userId, serviceType || 'virtual', serviceName, country || '', amount, currency || 'RUB', new Date().toISOString()]
+    );
+
+    res.json({ ok: true, id: purId, url: inv.url });
+  } catch (err) {
+    console.error('Fride create error:', err);
+    // Ошибка Fride (например, требуется telegram_id_client) — не роняем заказ,
+    // клиент уходит на ручную оплату.
+    res.json({ ok: false, error: err.message, manual: true });
+  }
+});
+
+// Вебхук Fride: уведомление об оплате/возврате. Подпись проверяется по
+// ИСХОДНОМУ телу (req.body — Buffer из-за express.raw для этого пути).
+app.post('/api/fride/webhook', async (req, res) => {
+  const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
+  const signature = req.get('X-Signature') || '';
+
+  if (!fride.verifyWebhookSignature(raw, signature)) {
+    return res.status(400).json({ error: 'Неверная подпись' });
+  }
+
+  let data = null;
+  try { data = JSON.parse(raw); } catch (e) { /* fallthrough */ }
+  if (!data || !data.order_id) {
+    return res.status(400).json({ error: 'Нет order_id' });
+  }
+
+  try {
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [String(data.order_id)]);
+    if (pur) {
+      if ((data.status === 'paid' || data.status === 'hold') && pur.status === 'pending') {
+        // Оплачен. Пытаемся выдать номер автоматически через SMS-агрегатор;
+        // если он не настроен или покупка не удалась — номер выдаст админ.
+        await db.run(`UPDATE purchases SET status = 'paid' WHERE id = $1`, [pur.id]);
+        const auto = await tryAutoIssue(pur.id);
+        if (process.env.ADMIN_TG_CHAT_ID) {
+          try {
+            let msg;
+            if (auto.ok) {
+              msg = (auto.fromPool ? '📦 Номер выдан из пула' : '🤖 Номер выдан автоматически') + ' — заказ №' + pur.id + '\n'
+                + 'Сервис: ' + pur.service_name + '\n'
+                + 'Страна: ' + (pur.country || '—') + '\n'
+                + 'Номер: ' + auto.phone + '\n'
+                + 'Статус: 🟢 Оплачен — покупатель получает SMS-код';
+            } else if (auto.reason === 'sms-not-configured') {
+              msg = '💳 Оплата получена — заказ №' + pur.id + '\n'
+                + 'Сервис: ' + pur.service_name + '\n'
+                + 'Страна: ' + (pur.country || '—') + '\n'
+                + 'Сумма: ' + pur.price + ' ' + pur.currency + '\n'
+                + 'Статус: 🟢 Оплачен — выдайте номер';
+            } else if (auto.reason === 'pool-empty') {
+              msg = '💳 Оплата получена — заказ №' + pur.id + '\n'
+                + 'Сервис: ' + pur.service_name + '\n'
+                + 'Страна: ' + (pur.country || '—') + '\n'
+                + '⚠️ Пул номеров пуст — добавьте номера или выдайте вручную';
+            } else {
+              msg = '💳 Оплата получена — заказ №' + pur.id + '\n'
+                + 'Сервис: ' + pur.service_name + '\n'
+                + 'Страна: ' + (pur.country || '—') + '\n'
+                + '⚠️ Автовыдача не удалась (' + auto.reason + ')\n'
+                + 'Выдайте номер вручную';
+            }
+            await tgBot.notifyAdmin(msg, tgAdminKeyboard());
+          } catch (err) {
+            console.error('TG notifyAdmin (fride webhook) error:', err);
+          }
+        }
+      } else if (data.status === 'refund' && pur.status === 'paid') {
+        // Возврат после оплаты — заказ снова отменён.
+        await db.run(`UPDATE purchases SET status = 'rejected' WHERE id = $1`, [pur.id]);
+        // Если номер был выдан из собственного пула — вернуть его в пул.
+        if (pur.activation_id && pur.activation_id.indexOf('pool:') === 0) {
+          const pid = parseInt(pur.activation_id.slice(5));
+          if (!isNaN(pid)) {
+            await db.run(`UPDATE number_pool SET status = 'available', purchase_id = NULL WHERE id = $1`, [pid]);
+          }
+        }
+        if (process.env.ADMIN_TG_CHAT_ID) {
+          try {
+            await tgBot.notifyAdmin(
+              '↩️ Возврат оплаты — заказ №' + pur.id + '\n'
+              + 'Сервис: ' + pur.service_name + ' · Статус: 🔴 Отменён',
+              tgAdminKeyboard()
+            );
+          } catch (err) {
+            console.error('TG notifyAdmin (refund) error:', err);
+          }
+        }
+      }
+    }
+    // 200 сразу — Fride не должен переотправлять вебхук.
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Fride webhook error:', err);
+    res.json({ ok: false, error: 'Ошибка сервера' });
+  }
+});
+
+// ========================================================================
+//  API: SMS-код (автовыданный номер)
+// ========================================================================
+
+// Получить SMS-код для оплаченного заказа с автовыданным номером (владелец).
+// При успехе заказ становится «Завершён» и код сохраняется в БД.
+app.post('/api/sms/code', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) return res.json({ error: 'Не указан заказ' });
+
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [String(id)]);
+    if (!pur) return res.json({ error: 'Заказ не найден' });
+    if (pur.user_id !== req.session.userId && !req.session.isAdmin) {
+      return res.json({ error: 'Нет доступа' });
+    }
+    if (pur.status !== 'paid') return res.json({ error: 'Заказ не в статусе «Оплачен»' });
+    if (!pur.activation_id) return res.json({ error: 'Номер выдан вручную — код сообщит администратор' });
+    if (pur.code) return res.json({ ok: true, code: pur.code, cached: true });
+
+    // Номер из собственного пула: SMS-код придёт на вебхук /api/sms/webhook,
+    // а не через агрегатор. Возвращаем «ждём», клиент обновит заказ позже.
+    if (pur.activation_id.indexOf('pool:') === 0) {
+      return res.json({ ok: true, waiting: true });
+    }
+
+    const r = await sms.getCode(pur.activation_id);
+    if (r.status === 'ok' && r.code) {
+      await db.run(`UPDATE purchases SET status = 'completed', code = $1 WHERE id = $2`, [r.code, pur.id]);
+      return res.json({ ok: true, code: r.code });
+    }
+    if (r.status === 'wait_code') return res.json({ ok: true, waiting: true });
+    if (r.status === 'cancel' || r.status === 'timeout') {
+      return res.json({ ok: false, error: 'Активация завершена или истекла — обратитесь в поддержку', expired: true });
+    }
+    return res.json({ ok: false, error: r.error || 'Код пока не получен' });
+  } catch (err) {
+    console.error('SMS code error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Отменить активацию (владелец): номер возвращается агрегатору, заказ закрывается.
+// Средства за заказ возвращаются через поддержку.
+app.post('/api/sms/cancel', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) return res.json({ error: 'Не указан заказ' });
+
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [String(id)]);
+    if (!pur) return res.json({ error: 'Заказ не найден' });
+    if (pur.user_id !== req.session.userId && !req.session.isAdmin) {
+      return res.json({ error: 'Нет доступа' });
+    }
+    if (pur.status === 'completed' || pur.status === 'rejected') {
+      return res.json({ error: 'Заказ уже закрыт' });
+    }
+    if (!pur.activation_id) return res.json({ error: 'Нечего отменять' });
+
+    if (pur.activation_id.indexOf('pool:') === 0) {
+      // Номер из собственного пула — возвращаем его в пул для следующего покупателя.
+      const pid = parseInt(pur.activation_id.slice(5));
+      if (!isNaN(pid)) {
+        await db.run(`UPDATE number_pool SET status = 'available', purchase_id = NULL WHERE id = $1`, [pid]);
+      }
+    } else {
+      try { await sms.cancel(pur.activation_id); }
+      catch (e) { console.error('SMS cancel error:', e.message); }
+    }
+
+    await db.run(`UPDATE purchases SET status = 'rejected' WHERE id = $1`, [pur.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('SMS cancel error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ========================================================================
+//  API: Собственный пул постоянных номеров
+// ========================================================================
+
+// Вебхук SMS-провайдера (Telnum/Virtnum и т.п.): на постоянный номер из пула
+// пришло SMS. Находим заказ, которому выдан номер, извлекаем код из текста и
+// завершаем заказ — клиент видит код без участия админа. Эндпоинт защищён
+// секретом SMS_WEBHOOK_TOKEN (в заголовке X-SMS-Webhook-Token или в теле).
+app.all('/api/sms/webhook', async (req, res) => {
+  try {
+    const secret = process.env.SMS_WEBHOOK_TOKEN;
+    if (!secret) return res.status(400).json({ error: 'Вебхук не настроен: задайте SMS_WEBHOOK_TOKEN' });
+
+    // Секрет принимаем тремя способами: заголовок (Asterisk-мост и классика),
+    // поле в теле (JSON/форма) или query-параметр (переадресация TelNum/Virtnum —
+    // они умеют только URL: .../api/sms/webhook?token=...&to=...&text=...).
+    const body = req.body || {};
+    const q = req.query || {};
+    const headerToken = req.get('X-SMS-Webhook-Token') || req.get('X-Webhook-Secret') || '';
+    const bodyToken = body.secret || body.token || '';
+    const queryToken = q.token || q.secret || '';
+    if (headerToken !== secret && bodyToken !== secret && queryToken !== secret) {
+      return res.status(401).json({ error: 'Неверный секрет' });
+    }
+
+    // Номер и текст SMS — у разных провайдеров разные имена полей
+    // (тело JSON/формы + query-параметры для URL-вебхуков).
+    const phoneRaw = String(body.phone || body.to || body.number || body.phone_number || body.destination || body.sender
+      || q.phone || q.to || q.number || q.phone_number || q.destination || q.sender || '');
+    const text = String(body.text || body.message || body.body || body.sms_text || body.msg || body.content
+      || q.text || q.message || q.body || q.msg || q.content || '');
+    if (!phoneRaw || !text) return res.json({ ok: false, error: 'Не хватает полей (phone/text)' });
+
+    const norm = phoneRaw.replace(/[^\d]/g, '');
+    if (norm.length < 7) return res.json({ ok: false, error: 'Некорректный номер' });
+
+    // Ищем выданный номер пула по совпадению цифр (формат у провайдера может
+    // отличаться от того, как админ загрузил номер).
+    const issued = await db.all(`SELECT * FROM number_pool WHERE status = 'issued'`);
+    let match = null;
+    for (const n of issued) {
+      const nn = String(n.phone).replace(/[^\d]/g, '');
+      if (nn === norm || nn.endsWith(norm) || norm.endsWith(nn)) { match = n; break; }
+    }
+    if (!match || !match.purchase_id) return res.json({ ok: false, error: 'Номер не найден в пуле' });
+
+    const pur = await db.get('SELECT * FROM purchases WHERE id = $1', [match.purchase_id]);
+    if (!pur || pur.code) return res.json({ ok: false, error: 'Заказ не найден или уже завершён' });
+
+    // Из текста SMS берём первое число из 4–8 цифр — это и есть код.
+    const m = text.match(/\d{4,8}/);
+    const code = m ? m[0] : text.trim();
+
+    await db.run(`UPDATE purchases SET status = 'completed', code = $1 WHERE id = $2`, [code, pur.id]);
+
+    if (process.env.ADMIN_TG_CHAT_ID) {
+      try {
+        await tgBot.notifyAdmin(
+          '📩 SMS получено — заказ №' + pur.id + ' завершён\n'
+          + 'Сервис: ' + pur.service_name + '\n'
+          + 'Номер: ' + pur.phone_number + '\n'
+          + 'Код: ' + code
+        );
+      } catch (err) { console.error('TG notifyAdmin (sms webhook) error:', err); }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('SMS webhook error:', err);
+    res.json({ ok: false, error: 'Ошибка сервера' });
+  }
+});
+
+// Статус SMS-вебхука и готовая ссылка переадресации для TelNum/Virtnum (админ)
+app.get('/api/sms/status', requireAdmin, async (req, res) => {
+  const siteBase = process.env.SITE_BASE_URL || tgBot.SITE_BASE;
+  const token = process.env.SMS_WEBHOOK_TOKEN || '';
+  const webhookUrl = siteBase + '/api/sms/webhook';
+  res.json({
+    ok: true,
+    poolEnabled: process.env.SMS_POOL_ENABLED === 'true',
+    webhookUrl: webhookUrl,
+    tokenSet: !!token,
+    // TelNum/Virtnum умеют только URL: токен и поля передаём query-параметрами.
+    // Переменные вебхука сервиса маппятся: номер получателя -> to, текст -> text.
+    telnumUrl: token
+      ? webhookUrl + '?token=' + encodeURIComponent(token) + '&to=%TO%&text=%MESSAGE%'
+      : null,
+  });
+});
+
+// Список номеров пула (админ)
+app.get('/api/pool/numbers', requireAdmin, async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM number_pool ORDER BY id DESC');
+    res.json({ numbers: rows });
+  } catch (err) {
+    console.error('Pool list error:', err);
+    res.json({ numbers: [] });
+  }
+});
+
+// Добавить номера в пул (админ). phones — строка (через пробел/запятую) или массив.
+app.post('/api/pool/numbers', requireAdmin, async (req, res) => {
+  try {
+    const { phones, country } = req.body || {};
+    const list = (Array.isArray(phones) ? phones : String(phones || '').split(/[\s,;]+/))
+      .map(function(s) { return String(s).trim(); })
+      .filter(Boolean);
+    if (list.length === 0) return res.json({ error: 'Укажите хотя бы один номер' });
+
+    let added = 0, skipped = 0;
+    for (const raw of list) {
+      const phone = String(raw).trim();
+      if (phone.replace(/[^\d]/g, '').length < 7) { skipped++; continue; }
+      try {
+        const r = await db.run(
+          `INSERT INTO number_pool (phone, country, status) VALUES ($1, $2, 'available')
+           ON CONFLICT (phone) DO NOTHING`,
+          [phone, country || '']
+        );
+        if (r.changes > 0) added++; else skipped++; // changes=0 — такой номер уже есть
+      } catch (e) { skipped++; }
+    }
+    res.json({ ok: true, added: added, skipped: skipped });
+  } catch (err) {
+    console.error('Pool add error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить номер из пула (админ)
+app.delete('/api/pool/numbers/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.json({ error: 'Неверный ID' });
+    await db.run('DELETE FROM number_pool WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Pool delete error:', err);
+    res.json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Вернуть номер в пул (админ): освобождает заказ, номер снова доступен
+app.post('/api/pool/numbers/:id/release', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.json({ error: 'Неверный ID' });
+    const num = await db.get('SELECT * FROM number_pool WHERE id = $1', [id]);
+    if (!num) return res.json({ error: 'Номер не найден' });
+    if (num.purchase_id) {
+      await db.run(
+        `UPDATE purchases SET status = 'rejected' WHERE id = $1 AND status != 'completed'`,
+        [num.purchase_id]
+      );
+    }
+    await db.run(`UPDATE number_pool SET status = 'available', purchase_id = NULL WHERE id = $1`, [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Pool release error:', err);
     res.json({ error: 'Ошибка сервера' });
   }
 });
