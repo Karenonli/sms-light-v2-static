@@ -781,12 +781,18 @@
     btn.classList.add('btn--loading');
     btn.textContent = '';
 
-    // Локальный режим (file://): сервера нет — регистрация по username работает только на реальном сайте.
+    // Локальный режим (file://): используем localStorage
     if (window.Auth && Auth.isLocalMode()) {
+      var res = Auth.localRegisterUsername(username, pw, email);
       btn.classList.remove('btn--loading');
-      err.textContent = 'Демо-режим (файл открыт без сервера). Регистрация по username работает на реальном сайте — sms-light-v2-static.vercel.app';
-      err.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Создать аккаунт';
+      if (res.error) {
+        err.textContent = res.error;
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Создать аккаунт';
+        return;
+      }
+      // Успешно — перенаправляем на страницу входа
+      window.location.href = 'login.html';
       return;
     }
 

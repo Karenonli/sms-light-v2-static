@@ -139,30 +139,65 @@
         email: email,
         password: password,
         is_admin: this._isAdminEmail(email),
-        verified: false,
+        verified: true,
         created_at: new Date().toISOString()
       };
       users[email] = user;
       this.setLocalUsers(users);
-      var code = this._genCode();
-      var codes = this.getLocalCodes();
-      codes[email] = code;
-      this.setLocalCodes(codes);
-      return { ok: true, dev_code: code };
+      return { ok: true };
+    },
+
+    // Регистрация по username (локальный режим file://: аналог /api/auth/register-username)
+    localRegisterUsername: function(username, password, email) {
+      var input = (username || '').trim().replace(/^@/, '');
+      if (!input) return { error: 'Введите username' };
+      if (input.length < 3) return { error: 'Username должен быть минимум 3 символа' };
+      if (!/^[A-Za-z0-9_.-]+$/.test(input)) return { error: 'Username может содержать только латинские буквы, цифры, точки, подчёркивания и дефисы' };
+      if (!password || password.length < 6) return { error: 'Пароль минимум 6 символов' };
+
+      var ukey = input.toLowerCase();
+      var users = this.getLocalUsers();
+      for (var key in users) {
+        if ((users[key].nickname || '').toLowerCase() === ukey) return { error: 'Этот username уже занят. Выберите другой.' };
+      }
+
+      var emailClean = (email || '').trim().toLowerCase();
+      var finalEmail = emailClean || (ukey + '@username.local');
+      for (var k in users) {
+        if ((users[k].email || '').toLowerCase() === finalEmail) return { error: 'Этот email уже зарегистрирован. Войдите через него.' };
+      }
+
+      var user = {
+        id: Date.now(),
+        name: '@' + input,
+        nickname: input,
+        email: finalEmail,
+        password: password,
+        is_admin: this._isAdminEmail(emailClean),
+        verified: true,
+        created_at: new Date().toISOString(),
+        tg_id: null
+      };
+      users[finalEmail] = user;
+      this.setLocalUsers(users);
+
+      // Автоматически авторизуем
+      this.setSession(user);
+      return { ok: true, user: { id: user.id, name: user.name, nickname: user.nickname, email: user.email, is_admin: user.is_admin } };
     },
 
     localVerify: function(email, code) {
-      email = (email || '').trim().toLowerCase();
+      var u = this._findLocalUser(email);
+      if (!u) return { error: 'Пользователь не найден' };
       var codes = this.getLocalCodes();
-      if (!codes[email] || codes[email] !== (code || '').trim()) {
+      if (!codes[u.email] || codes[u.email] !== (code || '').trim()) {
         return { error: 'Неверный код подтверждения' };
       }
-      delete codes[email];
+      delete codes[u.email];
       this.setLocalCodes(codes);
-      var users = this.getLocalUsers();
-      var u = users[email];
-      if (!u) return { error: 'Пользователь не найден' };
       u.verified = true;
+      var users = this.getLocalUsers();
+      users[u.email] = u;
       this.setLocalUsers(users);
       var user = { id: u.id, name: u.name, nickname: u.nickname || '', email: u.email, is_admin: !!u.is_admin || this._isAdminEmail(u.email) };
       this.setSession(user);
@@ -170,9 +205,7 @@
     },
 
     localLogin: function(email, password) {
-      email = (email || '').trim().toLowerCase();
-      var users = this.getLocalUsers();
-      var u = users[email];
+      var u = this._findLocalUser(email);
       if (!u || u.password !== password) return { error: 'Неверный email или пароль' };
       if (!u.verified) {
         var res = { error: 'Email не подтверждён', needs_verification: true, email: u.email };
@@ -192,7 +225,18 @@
       var codes = this.getLocalCodes();
       codes[u.email] = code;
       this.setLocalCodes(codes);
-      return { ok: true, dev_code: code };
+      return { ok: true, dev_code: code, via_telegram: !!u.tg_id };
+    },
+
+    // Привязка Telegram в локальном режиме (демо)
+    localSetTgId: function(email, tgId) {
+      var u = this._findLocalUser(email);
+      if (!u) return { error: 'Пользователь не найден' };
+      var users = this.getLocalUsers();
+      u.tg_id = String(tgId || '');
+      users[u.email] = u;
+      this.setLocalUsers(users);
+      return { ok: true };
     },
 
     localReset: function(email, code, password) {
