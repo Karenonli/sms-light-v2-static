@@ -510,14 +510,15 @@ app.post('/api/auth/forgot', async (req, res) => {
 app.post('/api/auth/reset', async (req, res) => {
   try {
     const { email, code, password } = req.body;
-    if (!email || !code || !password) {
+    const input = String(email || '').trim().replace(/^@/, '');
+    if (!input || !code || !password) {
       return res.json({ error: 'Заполните все поля' });
     }
     if (password.length < 6) {
       return res.json({ error: 'Пароль должен быть минимум 6 символов' });
     }
 
-    const user = await db.get('SELECT id, reset_code, reset_code_expires FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
+    const user = await db.get('SELECT id, reset_code, reset_code_expires FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [input]);
     if (!user) return res.json({ error: 'Пользователь не найден' });
     if (!user.reset_code) return res.json({ error: 'Код не был запрошен' });
     if (user.reset_code !== code) return res.json({ error: 'Неверный код восстановления' });

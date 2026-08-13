@@ -115,6 +115,19 @@
       return ['justxirrez@inbox.ru', 'mikoto_11@list.ru'].indexOf(e) !== -1;
     },
 
+    // Поиск локального пользователя по email или username (без @)
+    _findLocalUser: function(input) {
+      var key = (input || '').trim().toLowerCase().replace(/^@/, '');
+      var users = this.getLocalUsers();
+      var u = users[key];
+      if (!u) {
+        for (var k in users) {
+          if (users[k] && (users[k].nickname || '').toLowerCase() === key) { u = users[k]; break; }
+        }
+      }
+      return u || null;
+    },
+
     localRegister: function(name, email, password) {
       var users = this.getLocalUsers();
       email = (email || '').trim().toLowerCase();
@@ -173,29 +186,27 @@
     },
 
     localForgot: function(email) {
-      email = (email || '').trim().toLowerCase();
-      var users = this.getLocalUsers();
-      var u = users[email];
-      if (!u) return { error: 'Пользователь с таким email не найден' };
+      var u = this._findLocalUser(email);
+      if (!u) return { error: 'Пользователь с таким email или username не найден' };
       var code = this._genCode();
       var codes = this.getLocalCodes();
-      codes[email] = code;
+      codes[u.email] = code;
       this.setLocalCodes(codes);
       return { ok: true, dev_code: code };
     },
 
     localReset: function(email, code, password) {
-      email = (email || '').trim().toLowerCase();
+      var u = this._findLocalUser(email);
+      if (!u) return { error: 'Пользователь не найден' };
       var codes = this.getLocalCodes();
-      if (!codes[email] || codes[email] !== (code || '').trim()) {
+      if (!codes[u.email] || codes[u.email] !== (code || '').trim()) {
         return { error: 'Неверный код' };
       }
-      delete codes[email];
+      delete codes[u.email];
       this.setLocalCodes(codes);
       var users = this.getLocalUsers();
-      var u = users[email];
-      if (!u) return { error: 'Пользователь не найден' };
       u.password = password;
+      u.verified = true;
       this.setLocalUsers(users);
       return { ok: true };
     },
