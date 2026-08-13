@@ -435,14 +435,16 @@ app.post('/api/auth/resend-verification', async (req, res) => {
 app.post('/api/auth/forgot', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.json({ error: 'Введите email' });
+    // Убираем @ в начале — пользователь может ввести @username как в логине
+    const input = String(email || '').trim().replace(/^@/, '');
+    if (!input) return res.json({ error: 'Введите email или username' });
 
     // Ищем и по email, и по username (регистрация по username): LOWER делает
     // поиск нечувствительным к регистру. Код восстановления уходит на email
     // аккаунта — даже если пользователь ввёл свой username.
-    const user = await db.get('SELECT id, email, tg_id FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [email]);
+    const user = await db.get('SELECT id, email, tg_id FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(nickname) = LOWER($1)', [input]);
     if (!user) {
-      return res.json({ ok: true, message: 'Если аккаунт существует, код отправлен на email' });
+      return res.json({ ok: true, message: 'Если аккаунт существует, код отправлен на email или в Telegram' });
     }
 
     const code = generateCode(6);
@@ -461,7 +463,7 @@ app.post('/api/auth/forgot', async (req, res) => {
         parse_mode: 'HTML',
       });
       if (tgRes.ok) {
-        console.log(`→ Код восстановления для ${email} (tg_id: ${tgId}): ${code}`);
+        console.log(`→ Код восстановления для ${input} (tg_id: ${tgId}): ${code}`);
       } else {
         console.error('Forgot TG send failed, falling back to email:', tgRes.error);
       }
@@ -474,7 +476,7 @@ app.post('/api/auth/forgot', async (req, res) => {
       // Пользователь не привязал Telegram — fallback на email
       try {
         await sendEmail(user.email, 'Восстановление пароля — SMS Light', templates.reset(code));
-        console.log(`→ Код восстановления для ${email} (email: ${user.email}): ${code}`);
+        console.log(`→ Код восстановления для ${input} (email: ${user.email}): ${code}`);
         res.json({
           ok: true,
           message: 'Код восстановления отправлен на ваш email. Проверьте также папку «Спам».',
@@ -482,7 +484,7 @@ app.post('/api/auth/forgot', async (req, res) => {
         });
       } catch (emailErr) {
         console.error('Forgot email failed:', emailErr.message);
-        console.log(`→ [ВНИМАНИЕ] Код восстановления для ${email}: ${code} (письмо не отправлено)`);
+        console.log(`→ [ВНИМАНИЕ] Код восстановления для ${input}: ${code} (письмо не отправлено)`);
         if (IS_DEV && isUsingFallback()) {
           res.json({
             ok: true,
