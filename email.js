@@ -246,12 +246,16 @@ async function getTransporter() {
 
   const config = getTransportConfig();
   if (config) {
-    // Для порта 465 (SSL/TLS) используем RawSMTPTransport,
-    // обходя баг nodemailer v9 + Node.js TLS.
-    if (config.port === 465 || config.secure) {
-      console.log('→ SMTP: используем RawSMTPTransport (порт ' + config.port + ')');
+    // RawSMTPTransport обходит баг nodemailer v9 + Node.js v24 TLS.
+    // На Vercel (Node.js 18/20) nodemailer работает нормально — используем его.
+    const useRaw = !process.env.VERCEL && (config.port === 465 || config.secure);
+    if (useRaw) {
+      console.log('→ SMTP: используем RawSMTPTransport (Node.js ' + process.versions.node + ', порт ' + config.port + ')');
       _transporter = new RawSMTPTransport(config);
     } else {
+      if (config.port === 465 || config.secure) {
+        console.log('→ SMTP: используем nodemailer (Vercel, порт ' + config.port + ')');
+      }
       _transporter = nodemailer.createTransport(config);
     }
     return _transporter;
