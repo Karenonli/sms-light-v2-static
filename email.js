@@ -536,7 +536,7 @@ async function verifyConnection() {
     } else {
       console.log('→ SMTP: нет конфигурации, используется Ethereal (тестовый режим)');
     }
-    return true;
+    return { ok: true };
   } catch (err) {
     const config = getTransportConfig();
     if (config) {
@@ -549,7 +549,7 @@ async function verifyConnection() {
       console.error('✖ SMTP: Ethereal недоступен:', err.message);
     }
     _transporter = null; // сброс, чтобы следующая попытка создала свежее соединение
-    return false;
+    return { ok: false, error: err.message };
   }
 }
 

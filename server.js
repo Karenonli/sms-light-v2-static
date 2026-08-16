@@ -613,8 +613,8 @@ app.post('/api/admin/test-email', requireAdmin, async (req, res) => {
 // Статус SMTP
 app.get('/api/admin/smtp-status', requireAdmin, async (req, res) => {
   try {
-    const ok = await verifyConnection();
-    res.json({ ok });
+    const result = await verifyConnection();
+    res.json(result);
   } catch (err) {
     res.json({ ok: false, error: err.message });
   }
@@ -1826,7 +1826,7 @@ if (require.main === module) {
     console.log('');
     console.log('→ Проверка SMTP...');
     const smtpOk = await verifyConnection();
-    if (smtpOk) {
+    if (smtpOk.ok) {
       console.log('✓ Email-сервис готов к работе');
     } else {
       console.log('⚠ Email-сервис работает через Ethereal (тестовый режим)');
