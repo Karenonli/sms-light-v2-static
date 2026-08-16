@@ -3,118 +3,6 @@
 // Для продакшена укажите SMTP в .env файле
 
 const nodemailer = require('nodemailer');
-const tls = require('tls');
-const net = require('net');
-
-// ===== Raw SMTP transport (обход бага nodemailer v9 + Node.js v24 TLS) =====
-class RawSMTPTransport {
-  constructor(config) {
-    this.config = config;
-  }
-  async verify() {
-    const socket = await this._connect();
-    socket.destroy();
-  }
-  async sendMail(mail) {
-    const socket = await this._connect();
-    try {
-      const from = (mail.from || '').replace(/.*<(.*)>.*/, '$1').replace(/"/g, '');
-      const toList = Array.isArray(mail.to) ? mail.to : [mail.to];
-      const addrs = toList.map(t => (typeof t === 'string' ? t : t.address || t).replace(/.*<(.*)>.*/, '$1').replace(/"/g, ''));
-      await this._cmd(socket, `MAIL FROM:<${from}>`);
-      for (const addr of addrs) {
-        await this._cmd(socket, `RCPT TO:<${addr}>`);
-      }
-      await this._cmd(socket, 'DATA');
-      const boundary = '----=_Part_' + Date.now();
-      const headerLines = [
-        `From: ${mail.from}`,
-        `To: ${Array.isArray(mail.to) ? mail.to.join(', ') : mail.to}`,
-        `Subject: =?UTF-8?B?${Buffer.from(mail.subject || '').toString('base64')}?=`,
-        'MIME-Version: 1.0',
-        `Content-Type: multipart/alternative; boundary="${boundary}"`,
-        'X-Auto-Response-Suppress: All',
-        'Precedence: bulk',
-        '',
-      ];
-      for (const line of headerLines) {
-        socket.write(line + '\r\n');
-      }
-      // Text part
-      socket.write(`--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n`);
-      socket.write(Buffer.from(mail.text || '').toString('base64') + '\r\n');
-      // HTML part
-      socket.write(`--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n`);
-      socket.write((mail.html || '') + '\r\n');
-      // Close
-      socket.write(`--${boundary}--\r\n.\r\n`);
-      const resp = await this._waitForLine(socket);
-      return { messageId: `<${Date.now()}.raw@sms-light>` };
-    } finally {
-      socket.destroy();
-    }
-  }
-  _connect() {
-    return new Promise((resolve, reject) => {
-      const cfg = this.config;
-      const timer = setTimeout(() => reject(new Error('Raw SMTP timeout')), 20000);
-      const sock = tls.connect({ host: cfg.host, port: cfg.port, rejectUnauthorized: false, minVersion: 'TLSv1.2' }, async () => {
-        try {
-          clearTimeout(timer);
-          // Wait for greeting
-          await this._readLine(sock);
-          // EHLO
-          await this._cmd(sock, `EHLO ${cfg.host}`);
-          // AUTH LOGIN
-          await this._cmd(sock, 'AUTH LOGIN');
-          await this._cmd(sock, Buffer.from(cfg.auth.user).toString('base64'));
-          await this._cmd(sock, Buffer.from(cfg.auth.pass).toString('base64'));
-          resolve(sock);
-        } catch (e) {
-          sock.destroy();
-          reject(e);
-        }
-      });
-      sock.on('error', (e) => { clearTimeout(timer); reject(e); });
-    });
-  }
-  _readLine(socket) {
-    return new Promise((resolve) => {
-      const handler = (data) => {
-        socket.removeListener('data', handler);
-        resolve(data.toString());
-      };
-      socket.on('data', handler);
-    });
-  }
-  _cmd(socket, cmd) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`SMTP cmd timeout: ${cmd}`)), 15000);
-      const handler = (data) => {
-        const s = data.toString();
-        clearTimeout(timer);
-        socket.removeListener('data', handler);
-        if (/^[23]\d\d/.test(s)) {
-          resolve(s);
-        } else {
-          reject(new Error(`SMTP ${cmd} failed: ${s.trim()}`));
-        }
-      };
-      socket.on('data', handler);
-      socket.write(cmd + '\r\n');
-    });
-  }
-  _waitForLine(socket) {
-    return new Promise((resolve) => {
-      const handler = (data) => {
-        socket.removeListener('data', handler);
-        resolve(data.toString());
-      };
-      socket.on('data', handler);
-    });
-  }
-  close() {}
-}
 
 // ===== SMTP конфигурация =====
 let transportConfig = null;
@@ -130,15 +18,7 @@ function getTransportConfig() {
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-      },
-      tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
-      },
-      family: 4,
-      connectionTimeout: 20000,
-      greetingTimeout: 10000,
-      socketTimeout: 20000
+      }
     };
   }
   return transportConfig;
@@ -152,12 +32,7 @@ async function getTransporter() {
 
   const config = getTransportConfig();
   if (config) {
-    // Use raw TLS transport (works with Node.js v24 where nodemailer hangs)
-    if (config.port === 465 && config.secure) {
-      _transporter = new RawSMTPTransport(config);
-    } else {
-      _transporter = nodemailer.createTransport(config);
-    }
+    _transporter = nodemailer.createTransport(config);
     return _transporter;
   }
 
@@ -424,8 +299,9 @@ async function verifyConnection() {
   try {
     const transporter = await getTransporter();
 
+    // Таймаут 10 секунд на проверку SMTP
     const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Таймаут подключения (20s)')), 20000)
+      setTimeout(() => reject(new Error('Таймаут подключения (10s)')), 10000)
     );
     await Promise.race([transporter.verify(), timeout]);
 
@@ -441,10 +317,13 @@ async function verifyConnection() {
     if (config) {
       console.error(`✖ SMTP: не удалось подключиться к ${config.host}:${config.port}`);
       console.error(`  Причина: ${err.message}`);
+      console.error('  Если вы используете Mail.ru/inbox.ru — нужен пароль приложения (app password),');
+      console.error('  а не обычный пароль от почты. Создайте его в настройках Mail.ru → Безопасность →');
+      console.error('  Пароли для внешних приложений.');
     } else {
       console.error('✖ SMTP: Ethereal недоступен:', err.message);
     }
-    _transporter = null;
+    _transporter = null; // сброс, чтобы следующая попытка создала свежее соединение
     return false;
   }
 }
@@ -471,21 +350,29 @@ async function sendEmail(to, subject, html) {
   try {
     const transporter = await getTransporter();
 
-    const mailObj = {
+    // Timeout 15s for sending
+    const sendPromise = transporter.sendMail({
       from: process.env.SMTP_FROM || '"SMS Light" <noreply@sms-light.ru>',
       to, subject, html,
+      // Текстовая версия + заголовки повышают доставляемость
       text: htmlToText(html),
-    };
-
-    // Timeout 20s for sending
-    const sendPromise = transporter.sendMail(mailObj);
+      headers: {
+        'X-Auto-Response-Suppress': 'All',
+        'Precedence': 'bulk',
+      },
+    });
     const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout (20s)')), 20000)
+      setTimeout(() => reject(new Error('Timeout (15s)')), 15000)
     );
     const info = await Promise.race([sendPromise, timeout]);
 
-    const infoMsgId = info && info.messageId ? info.messageId : '(raw)';
-    console.log(`>> Email sent to ${to}: messageId=${infoMsgId}`);
+    // Ethereal: show preview URL
+    if (!transportConfig) {
+      console.log(`>> Email sent to ${to}: ${nodemailer.getTestMessageUrl(info)}`);
+    } else {
+      console.log(`>> Email sent to ${to}: messageId=${info.messageId}`);
+    }
+
     return info;
   } catch (err) {
     console.error('>> Email error:', err.message);
