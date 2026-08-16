@@ -1799,6 +1799,14 @@ app.post('/api/tg/test-notify', requireAdmin, async (req, res) => {
   res.json(r);
 });
 
+// ===== Global error handler (всегда отдаёт JSON, не HTML) =====
+app.use((err, req, res, _next) => {
+  console.error('✖ Unhandled error:', err.message);
+  if (!res.headersSent) {
+    res.status(500).json({ ok: false, error: err.message || 'Внутренняя ошибка сервера' });
+  }
+});
+
 // ========================================================================
 //  Экспорт + запуск
 // ========================================================================

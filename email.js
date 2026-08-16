@@ -524,9 +524,9 @@ async function verifyConnection() {
   try {
     const transporter = await getTransporter();
 
-    // Таймаут 10 секунд на проверку SMTP
+    // Таймаут 5 секунд на проверку SMTP
     const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Таймаут подключения (10s)')), 10000)
+      setTimeout(() => reject(new Error('Таймаут подключения (5s)')), 5000)
     );
     await Promise.race([transporter.verify(), timeout]);
 
