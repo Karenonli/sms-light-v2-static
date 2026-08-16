@@ -3,6 +3,196 @@
 // Для продакшена укажите SMTP в .env файле
 
 const nodemailer = require('nodemailer');
+const tls = require('tls');
+const net = require('net');
+
+// ===== Raw SMTP transport (обход бага nodemailer v9 + Node.js TLS) =====
+// nodemailer v9 на Node.js 18+ зависает при TLS-хэндшейке через своё встроенные
+// соединение. Этот транспорт использует нативный tls.connect(), который работает
+// стабильно, а письма формирует и отправляет вручную через SMTP-команды.
+class RawSMTPTransport {
+  constructor(options) {
+    this.options = options || {};
+    this.host = options.host || 'localhost';
+    this.port = options.port || 465;
+    this.secure = options.secure !== false;
+    this.auth = options.auth || null;
+    this.name = 'RawSMTP';
+  }
+
+  async verify() {
+    const conn = await this._connect();
+    await this._close(conn);
+    return true;
+  }
+
+  async sendMail(mail) {
+    const conn = await this._connect();
+    const fromAddr = typeof mail.from === 'string' ? mail.from.replace(/.*<([^>]+)>.*/, '$1') : String(mail.from || '');
+    const toAddrs = Array.isArray(mail.to) ? mail.to : [mail.to];
+
+    try {
+      // EHLO
+      try { await this._cmd(conn, 'EHLO ' + this.host); } catch (_) {}
+
+      // AUTH
+      if (this.auth && this.auth.user && this.auth.pass) {
+        const authStr = Buffer.from('\0' + this.auth.user + '\0' + this.auth.pass).toString('base64');
+        await this._cmd(conn, 'AUTH PLAIN ' + authStr);
+      }
+
+      // MAIL FROM
+      await this._cmd(conn, 'MAIL FROM:<' + fromAddr + '>');
+      // RCPT TO
+      for (const addr of toAddrs) {
+        const rcpt = typeof addr === 'string' ? addr.replace(/.*<([^>]+)>.*/, '$1') : String(addr);
+        await this._cmd(conn, 'RCPT TO:<' + rcpt + '>');
+      }
+      // DATA
+      await this._cmd(conn, 'DATA');
+
+      // Build raw message
+      const headerLines = [];
+      if (mail.from) headerLines.push('From: ' + (typeof mail.from === 'string' ? mail.from : String(mail.from)));
+      if (mail.to) {
+        const toStr = Array.isArray(mail.to) ? mail.to.join(', ') : String(mail.to);
+        headerLines.push('To: ' + toStr);
+      }
+      if (mail.cc) headerLines.push('Cc: ' + mail.cc);
+      if (mail.subject) headerLines.push('Subject: ' + mail.subject);
+      if (mail.headers) {
+        for (const [k, v] of Object.entries(mail.headers)) {
+          headerLines.push(k + ': ' + v);
+        }
+      }
+
+      const html = mail.html || '';
+      const text = mail.text || '';
+      const boundary = '----=_Part_' + Date.now();
+
+      if (mail.text && mail.html) {
+        headerLines.push('MIME-Version: 1.0');
+        headerLines.push('Content-Type: multipart/alternative; boundary="' + boundary + '"');
+        var body = '\r\n--' + boundary + '\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n' + text + '\r\n\r\n--' + boundary + '\r\nContent-Type: text/html; charset=utf-8\r\n\r\n' + html + '\r\n\r\n--' + boundary + '--';
+      } else if (mail.html) {
+        headerLines.push('MIME-Version: 1.0');
+        headerLines.push('Content-Type: text/html; charset=utf-8');
+        var body = '\r\n' + html;
+      } else {
+        var body = '\r\n' + (text || '');
+      }
+
+      const fullMessage = headerLines.join('\r\n') + body;
+      await this._write(conn, fullMessage);
+      await this._cmd(conn, '.');
+
+      const messageId = (mail.headers && mail.headers['Message-ID'])
+        || ('<' + Date.now() + '-' + Math.random().toString(36).slice(2) + '@' + this.host + '>');
+
+      return { messageId, accepted: toAddrs, rejected: [] };
+    } finally {
+      try { await this._cmd(conn, 'QUIT'); } catch (_) {}
+      await this._close(conn);
+    }
+  }
+
+  _connect() {
+    return new Promise((resolve, reject) => {
+      const opts = {
+        host: this.host,
+        port: this.port,
+        rejectUnauthorized: false,
+        servername: this.host,
+        timeout: 15000,
+      };
+
+      const onConnect = () => {
+        const buf = '';
+        conn.removeAllListeners('error');
+        conn.removeAllListeners('timeout');
+        conn.setTimeout(0);
+        resolve(conn);
+      };
+
+      const onTimeout = () => {
+        conn.destroy();
+        reject(new Error('RawSMTP: connect timeout (' + this.host + ':' + this.port + ')'));
+      };
+
+      const onError = (err) => {
+        conn.destroy();
+        reject(err);
+      };
+
+      let conn;
+      if (this.secure) {
+        conn = tls.connect(opts, onConnect);
+      } else {
+        conn = net.connect({ host: this.host, port: this.port }, () => {
+          conn.removeAllListeners('error');
+          conn.removeAllListeners('timeout');
+          conn.setTimeout(0);
+          resolve(conn);
+        });
+      }
+      conn.setTimeout(15000, onTimeout);
+      conn.on('error', onError);
+    });
+  }
+
+  _cmd(conn, command) {
+    return new Promise((resolve, reject) => {
+      let response = '';
+      let done = false;
+
+      const onData = (chunk) => {
+        response += chunk.toString();
+        // SMTP multiline: lines starting with 3xx have continuation
+        const lines = response.split('\r\n').filter(Boolean);
+        const lastLine = lines[lines.length - 1];
+        if (lastLine && lastLine.length >= 4 && lastLine[3] === ' ') {
+          // Final response line
+          done = true;
+          conn.removeListener('data', onData);
+          const code = parseInt(lastLine.substring(0, 3));
+          if (code >= 200 && code < 400) {
+            resolve(response.trim());
+          } else {
+            reject(new Error('SMTP ' + command + ': ' + response.trim()));
+          }
+        }
+      };
+
+      conn.on('data', onData);
+      conn.write(command + '\r\n');
+
+      // Safety timeout
+      setTimeout(() => {
+        if (!done) {
+          conn.removeListener('data', onData);
+          reject(new Error('SMTP ' + command + ': timeout'));
+        }
+      }, 30000);
+    });
+  }
+
+  _write(conn, data) {
+    return new Promise((resolve, reject) => {
+      conn.write(data, 'utf8', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  _close(conn) {
+    return new Promise((resolve) => {
+      if (conn.destroyed) { resolve(); return; }
+      conn.end(() => resolve());
+      setTimeout(() => { try { conn.destroy(); } catch (_) {} resolve(); }, 3000);
+    });
+  }
+}
 
 // ===== SMTP конфигурация =====
 let transportConfig = null;
@@ -32,7 +222,14 @@ async function getTransporter() {
 
   const config = getTransportConfig();
   if (config) {
-    _transporter = nodemailer.createTransport(config);
+    // Для порта 465 (SSL/TLS) используем RawSMTPTransport,
+    // обходя баг nodemailer v9 + Node.js TLS.
+    if (config.port === 465 || config.secure) {
+      console.log('→ SMTP: используем RawSMTPTransport (порт ' + config.port + ')');
+      _transporter = new RawSMTPTransport(config);
+    } else {
+      _transporter = nodemailer.createTransport(config);
+    }
     return _transporter;
   }
 
